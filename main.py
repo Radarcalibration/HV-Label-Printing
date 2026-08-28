@@ -4,14 +4,14 @@ import sys
 import traceback
 from pathlib import Path
 from tkinter import messagebox
-import webbrowser
+# import webbrowser
 #import subprocess
 # import os
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import tkinter as tk
-from tkinter import ttk
+# from tkinter import ttk
 
 
 from common.auth.machine_lock import is_authorized
@@ -82,9 +82,9 @@ def _install_error_dialog(root: tk.Tk) -> None:
 def main() -> None:
     root = tk.Tk()
     
-    def _resource_path(relative: str) -> Path:
-        base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
-        return base / relative
+    # def _resource_path(relative: str) -> Path:
+    #     base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+    #     return base / relative
 
     if not is_authorized():
         root.withdraw()  # never show the main window
@@ -95,7 +95,6 @@ def main() -> None:
     root.title("HV Label Printer — ULTRAVIOLETTE AUTOMATIVE")
     # root.geometry("1280x860")
     # root.minsize(1000, 600)
-    #root.minsize(1000,600)
     root.resizable(False,False)
     root.state("zoomed")
 

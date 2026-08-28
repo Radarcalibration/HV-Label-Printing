@@ -1,4 +1,3 @@
-""" python install_fonts.py """
 from __future__ import annotations
 
 import ctypes
@@ -15,7 +14,7 @@ FONT_FILES = [
     (r"C:\Users\RadarCalibration\Downloads\Fonts\Fonts\BrutalType-Medium.ttf", "BRUTALTYPE-MEDIUM.TTF"),
 ]
 
-# Printer's E: memory (module RAM, persists across power cycles on ZD421).
+# Printer's E: memory (other memory locations also there. refer them)
 DEST_DRIVE = "E"
 
 
@@ -103,9 +102,9 @@ def main() -> None:
             continue
         print(f"  Done — reference it in ZPL as ^A@N,h,w,{DEST_DRIVE}:{printer_filename}")
 
-    print()
-    print("Font install finished. This only needs to be run once per printer.")
+    print("Font install finished.")
 
 
 if __name__ == "__main__":
-    main()
+    main() 
+    """ python install_fonts.py """
