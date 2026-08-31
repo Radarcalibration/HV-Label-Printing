@@ -100,7 +100,7 @@ class ManageUsersDialog(_CenteredDialog):
         self.new_username_var = tk.StringVar()
         ttk.Entry(frame, textvariable=self.new_username_var, width=28).grid(row=6, column=1, sticky=tk.EW, pady=4)
 
-        ttk.Label(frame, text="Password (min 8 chars)").grid(row=7, column=0, sticky=tk.W, pady=4)
+        ttk.Label(frame, text="Password (min 8)").grid(row=7, column=0, sticky=tk.W, pady=4)
         self.new_password_var = tk.StringVar()
         ttk.Entry(frame, textvariable=self.new_password_var, width=28, show="*").grid(
             row=7, column=1, sticky=tk.EW, pady=4

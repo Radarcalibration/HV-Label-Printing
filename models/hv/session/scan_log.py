@@ -16,7 +16,7 @@ LOG_FILE = get_base_dir() / "data" / "scan_log.xlsx"
 
 SHEET_NAME = "HV Dummy"
 
-PROTECT_SHEET = False
+PROTECT_SHEET = True
 
 
 def _ensure_writable(path: Path) -> None:
@@ -338,7 +338,6 @@ def patch_admin_ack(sheet_row: int, ack_text: str, *, excel_password: str = "060
 
 
 def add_sheet(sheet_name: str, *, excel_password: str = "06082003") -> tuple[bool, str]:
-    """Add a new blank sheet to the workbook. Any user can call this."""
     if not sheet_name.strip():
         return False, "Sheet name cannot be empty."
     wb = _ensure_workbook(excel_password)

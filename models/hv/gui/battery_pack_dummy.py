@@ -35,7 +35,7 @@ from models.hv.session.pack_store import (
 from models.hv.session.scan_log import ScanRecord, append_scan_record
 
 COMPACT_IPADY = 2
-_RESET_DELAY_MS = 10
+_RESET_DELAY_MS = 100
 
 
 def _format_date(dt: datetime) -> str:
@@ -171,7 +171,8 @@ class BatteryPackDummyGUI:
             ("Plant",    "plant",    ["Jigani", "Domlur"]),
             ("Line",     "line",     ["1", "2", "3"]),
             ("Variant",  "variant",  VARIANT_OPTIONS),
-            ("Pack ID Format", "pack_id_format", ["New", "Old"]),
+            #("Pack ID Format", "pack_id_format", ["New", "Old"]), #use this if you need old pack id
+            ("Pack ID Format", "pack_id_format", ["New"]),
             ("Pack Shift", "pack_shift", ["A", "B", "C"]),
         ]
 
@@ -195,7 +196,7 @@ class BatteryPackDummyGUI:
         self.vars: dict[str, tk.Variable] = {}
 
 
-        row1 = ttk.Frame(config_frame)
+        row1 = ttk.Frame(config_frame) #row 1 variables
         row1.pack(fill=tk.X, pady=(0, 4))
         configure_equal_columns(row1, 6)
 
@@ -206,7 +207,7 @@ class BatteryPackDummyGUI:
             self._add_field(row1, column, label, key, values)
 
 
-        row2 = ttk.Frame(config_frame)
+        row2 = ttk.Frame(config_frame) #row 2 variables
         row2.pack(fill=tk.X, pady=(0, 4))
         configure_equal_columns(row2, 3)
         for column, (label, key, values) in enumerate(visible_row2):
@@ -239,7 +240,7 @@ class BatteryPackDummyGUI:
 
         serial_entry.bind("<FocusOut>", self._on_serial_count_commit)
         serial_entry.bind("<Return>", self._on_serial_count_commit)
-        # serial_var.set("000001")
+        serial_var.set("000001")
 
     def _add_field(self, parent: ttk.Frame, column: int, label: str, key: str, values: list[str] | None) -> None:
         frame = ttk.Frame(parent)
@@ -586,7 +587,7 @@ class BatteryPackDummyGUI:
             p = parse_module_id(mv.get().strip())
             if p:
                 dummy_variants.add(p.variant.strip().lower())
-        dummy_status = "INTEGRATION OK" if len(dummy_variants) == 1 else "Mismatch"
+        dummy_status = "INTEGRATION OK" if len(dummy_variants) == 1 else "INTEGRATION FAILED" #"Mismatch"
 
         record = ScanRecord(
             date=mfg_date,

@@ -111,7 +111,6 @@ def build_serial_number(
     new_format_requested = any(v is not None for v in (model, variant, shift, category))
 
     if not new_format_requested:
-        # -- OLD format --
         if plant_key not in PLANT_CODES:
             raise ValueError(f"Unsupported plant: {plant}")
         if line not in {"1", "2", "3"}:

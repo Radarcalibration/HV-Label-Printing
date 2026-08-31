@@ -58,8 +58,7 @@ class AuthBar(ttk.Frame):
             plural = "entry" if count == 1 else "entries"
             messagebox.showinfo(
                 "Unacknowledged issues",
-                f"You have {count} unacknowledged defect {plural}.\n\n"
-                "Open Admin Settings → Messages to review.",
+                f"{count} unacknowledged issue {plural}.\n\n",
                 parent=self.winfo_toplevel(),
             )
 
