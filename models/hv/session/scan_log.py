@@ -16,7 +16,7 @@ LOG_FILE = get_base_dir() / "data" / "scan_log.xlsx"
 
 SHEET_NAME = "HV Dummy"
 
-PROTECT_SHEET = True
+PROTECT_SHEET = False
 
 
 def _ensure_writable(path: Path) -> None:

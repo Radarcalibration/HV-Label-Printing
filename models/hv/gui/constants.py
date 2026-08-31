@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-VARIANT_OPTIONS = ["8P", "10P","12P", "16P", "24P", "27P"] #8P and 10P are of low voltage
+VARIANT_OPTIONS = ["12P", "16P", "24P", "27P"] 
 
 VARIANT_TO_MODEL = {
     "12P": "VX156590",
