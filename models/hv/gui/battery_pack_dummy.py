@@ -78,9 +78,10 @@ class BatteryPackDummyGUI:
         self.print_var = tk.StringVar(value="print")
 
 
-        stored = load_pack_serial()
-        stored_parsed = parse_serial_number(stored) if stored else None
-        self._true_date = stored_parsed.as_date if stored_parsed else datetime.now().date()
+        # stored = load_pack_serial()
+        # stored_parsed = parse_serial_number(stored) if stored else None
+        #self._true_date = stored_parsed.as_date if stored_parsed else datetime.now().date()
+        self._true_date = datetime.now().date() #always call today date, no ecncoded date fallback should happen 
 
         self._build_ui()
         self._refresh_datetime()
@@ -883,8 +884,9 @@ class BatteryPackDummyGUI:
                 continue
             if key == "date":
                 if isinstance(widget, ttk.Entry):
-                    set_entry_enabled(widget, True)
-                continue
+                    widget.configure(state="readonly")
+                    # set_entry_enabled(widget, True)
+                # continue
             if isinstance(widget, ttk.Combobox):
                 set_combobox_enabled(widget, self.is_admin)
             elif isinstance(widget, ttk.Entry):
