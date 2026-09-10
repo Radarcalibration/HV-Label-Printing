@@ -188,3 +188,5 @@ icon, bundling `assets/` and `data/`.
 - Tkinter (bundled with standard Python on Windows)
 - Pillow (for logo image handling, if regenerating `assets/logo.ico`)
 - Three Zebra ZD421 printers installed with ZPL drivers, named as above
+
+# created by Anil D
