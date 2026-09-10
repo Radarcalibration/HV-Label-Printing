@@ -172,8 +172,8 @@ class BatteryPackDummyGUI:
             ("Plant",    "plant",    ["Jigani", "Domlur"]),
             ("Line",     "line",     ["1", "2", "3"]),
             ("Variant",  "variant",  VARIANT_OPTIONS),
-            #("Pack ID Format", "pack_id_format", ["New", "Old"]), #use this if you need old pack id
-            ("Pack ID Format", "pack_id_format", ["New"]),
+            #("Pack ID Format", "pack_id_format", ["New", "Old"]), #use this if you need old format
+            ("Pack ID Format", "pack_id_format", ["New"]), #only new format
             ("Pack Shift", "pack_shift", ["A", "B", "C"]),
         ]
 
@@ -241,7 +241,7 @@ class BatteryPackDummyGUI:
 
         serial_entry.bind("<FocusOut>", self._on_serial_count_commit)
         serial_entry.bind("<Return>", self._on_serial_count_commit)
-        serial_var.set("000001")
+        serial_var.set("000001") #initial count (can be editable)
 
     def _add_field(self, parent: ttk.Frame, column: int, label: str, key: str, values: list[str] | None) -> None:
         frame = ttk.Frame(parent)
@@ -884,7 +884,7 @@ class BatteryPackDummyGUI:
                 continue
             if key == "date":
                 if isinstance(widget, ttk.Entry):
-                    widget.configure(state="readonly")
+                    widget.configure(state="readonly") #date editable to only admins
                     # set_entry_enabled(widget, True)
                 # continue
             if isinstance(widget, ttk.Combobox):

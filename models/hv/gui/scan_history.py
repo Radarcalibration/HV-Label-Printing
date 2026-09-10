@@ -73,9 +73,9 @@ class ScanHistoryDialog(tk.Toplevel):
     ) -> None:
         super().__init__(parent)
         origin_label = _ORIGIN_LABELS.get(origin, origin)
-        self.title(f"Scan History {origin_label}")
-        self.geometry("1100x560")
-        # self.minsize(900, 400)
+        self.title(f"Scan History - Reprint: {origin_label}")
+        self.geometry("1300x560")
+        self.minsize(900, 400)
 
         self._print_mode = print_mode
         self._variant = variant

@@ -9,7 +9,6 @@ from tkinter import messagebox
 # import os
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-
 import tkinter as tk
 # from tkinter import ttk
 

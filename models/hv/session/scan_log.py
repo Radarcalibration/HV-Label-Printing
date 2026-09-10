@@ -16,7 +16,7 @@ LOG_FILE = get_base_dir() / "data" / "scan_log.xlsx"
 
 SHEET_NAME = "HV Dummy"
 
-PROTECT_SHEET = False
+PROTECT_SHEET = False #excel sheet protection is disables (False)
 
 
 def _ensure_writable(path: Path) -> None:

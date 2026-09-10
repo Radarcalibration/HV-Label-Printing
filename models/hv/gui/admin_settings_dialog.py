@@ -34,7 +34,7 @@ class AdminSettingsDialog(tk.Toplevel):
         self.title("Admin Settings")
         self.geometry("1200x600")
         self.minsize(900, 460)
-        # self.transient(parent.winfo_toplevel())
+        self.transient(parent.winfo_toplevel())
 
         self._current_user = current_user
         self._excel_password = excel_password
