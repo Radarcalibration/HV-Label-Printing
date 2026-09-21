@@ -102,7 +102,7 @@ def main() -> None:
             continue
         print(f"  Done — reference it in ZPL as ^A@N,h,w,{DEST_DRIVE}:{printer_filename}")
 
-    print("Font install finished.")
+    print("Font install finished, only one time upload needed.")
 
 
 if __name__ == "__main__":

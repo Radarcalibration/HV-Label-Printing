@@ -89,7 +89,7 @@ class HVApp(ttk.Frame):
         self.auth_bar = AuthBar(top_bar, self.session, self._on_auth_change)
         self.auth_bar.pack(side=tk.RIGHT)
         
-        ttk.Button(top_bar, text="LV Label Printer", command=open_lv_printer).pack(side="right", padx=10)
+        ttk.Button(top_bar, text="LV Label Printer", command=open_lv_printer, state="disabled").pack(side="right", padx=10)
         
         ttk.Button(top_bar, text="Shockwave Label Printer", command=open_shockwave_printer, state="disabled").pack(side="right", padx=10)
         
