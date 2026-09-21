@@ -88,7 +88,16 @@ PLANT_CODES_HV = {
     "Domlur": ("2"),
     "TBD": ("3"),
 }
-PLANT_BY_CODE_HV = {v: k for k, v in PLANT_CODES_HV.items()}
+PLANT_BY_CODE_HV = {
+    "1": "Jigani",
+    "A": "Jigani",
+
+    "2": "Domlur",
+    "B": "Domlur",
+
+    "3": "TBD",
+    "C": "TBD",
+}
 PLANT_OPTIONS = list(PLANT_CODES_HV.keys())
 
 LINE_CODES = {"Line 1": "1", "Line 2": "2", "Line 3": "3"}
