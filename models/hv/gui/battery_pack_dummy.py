@@ -38,8 +38,11 @@ COMPACT_IPADY = 2
 _RESET_DELAY_MS = 100
 
 
-def _format_date(dt: datetime) -> str:
-    return format_date_display(dt.date())
+# def _format_date(dt: datetime) -> str:
+#     return format_date_display(dt.date())
+
+def _format_time(dt: datetime) -> str:
+    return dt.strftime("%I:%M:%S %p").lstrip("0")
 
 
 def _format_time(dt: datetime) -> str:
@@ -84,6 +87,7 @@ class BatteryPackDummyGUI:
         self._true_date = datetime.now().date() #always call today date, no ecncoded date fallback should happen 
 
         self._build_ui()
+        self.vars["pack_shift"].set(self._get_current_shift())
         self._refresh_datetime()
         self._on_variant_or_revision_change()
         self._init_serial()
@@ -111,6 +115,18 @@ class BatteryPackDummyGUI:
     def _using_new_format(self) -> bool:
         fmt = self.vars.get("pack_id_format")
         return fmt is None or fmt.get() == "New"
+    
+    def _get_current_shift(self) -> str:
+        now = datetime.now().time()
+
+        if now.hour > 6 or (now.hour == 6 and now.minute >= 30):
+            if now.hour < 15:
+                return "A"
+
+        if 15 <= now.hour < 23:
+            return "B"
+
+        return "C"
 
     def _new_format_kwargs(self) -> dict:
         
@@ -256,6 +272,7 @@ class BatteryPackDummyGUI:
         elif key == "serial_count":
             var = tk.StringVar()
             widget = ttk.Entry(frame, textvariable=var, font=FIELD_FONT)
+            
         elif key == "date":
             var = tk.StringVar(value=self._current_date_str())
             widget = ttk.Entry(frame, textvariable=var, font=FIELD_FONT)
@@ -869,11 +886,52 @@ class BatteryPackDummyGUI:
             self._suppress_traces = False
         self.serial_number_var.set(serial.strip())
 
+    # def _refresh_datetime(self) -> None:
+    #     now = datetime.now()
+    #     self.vars["time"].set(_format_time(now))
+    #     self.root.after(1000, self._refresh_datetime)
+    
     def _refresh_datetime(self) -> None:
         now = datetime.now()
-        self.vars["time"].set(_format_time(now))
-        self.root.after(1000, self._refresh_datetime)
 
+        # Update time display
+        self.vars["time"].set(_format_time(now))
+
+        rebuild_required = False
+
+        # Date rollover
+        current_date = now.date()
+
+        if current_date != self._true_date:
+            self._true_date = current_date
+
+            if "date" in self.vars:
+                self._suppress_traces = True
+                try:
+                    self.vars["date"].set(self._current_date_str())
+                finally:
+                    self._suppress_traces = False
+
+            rebuild_required = True
+
+        # Shift rollover
+        current_shift = self._get_current_shift()
+
+        if self.vars["pack_shift"].get() != current_shift:
+            self._suppress_traces = True
+            try:
+                self.vars["pack_shift"].set(current_shift)
+            finally:
+                self._suppress_traces = False
+
+            rebuild_required = True
+
+        # Rebuild serial only when needed
+        if rebuild_required:
+            self._rebuild_and_store_serial()
+
+        self.root.after(1000, self._refresh_datetime)
+    
     def _apply_permissions(self) -> None:
         if self._category_combo is not None:
             set_combobox_enabled(self._category_combo, self.is_admin)
@@ -884,13 +942,21 @@ class BatteryPackDummyGUI:
                 continue
             if key == "date":
                 if isinstance(widget, ttk.Entry):
-                    widget.configure(state="readonly") #date editable to only admins
+                    widget.configure(state="readonly") 
                     # set_entry_enabled(widget, True)
-                # continue
+                continue #Comment it to date editable to only admins
+            
+            if key == "pack_shift":
+                if isinstance(widget,ttk.Combobox):
+                    widget.configure(state="readonly")
+                    set_combobox_enabled(widget, False)
+                continue   # comment it to make pack shift editable to admin
+            
             if isinstance(widget, ttk.Combobox):
                 set_combobox_enabled(widget, self.is_admin)
             elif isinstance(widget, ttk.Entry):
                 set_entry_enabled(widget, self.is_admin)
+            
 
         if self._serial_number_entry is not None:
             set_entry_enabled(self._serial_number_entry, True)
