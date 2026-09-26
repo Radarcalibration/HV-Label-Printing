@@ -26,30 +26,11 @@ ULTRAVIOLETTE logo and provides admin login for editing locked fields.
 
 ### Module ID (scanned on the Battery Pack Dummy screen)
 
-21-character code, e.g. `A1331A1A0806262018187`:
-
-| Position | Field        | Values |
-|----------|--------------|--------|
-| 0        | Variant      | `A` = Low Range, `B` = High Range |
-| 1        | Module       | `1`–`4` (M1–M4) |
-| 2        | Cell Mfr     | `1`, `2`, `3` |
-| 3        | Grade No     | `1`–`5` → A01–A05 |
-| 4        | Group        | `1`–`7` → G1–G7 |
-| 5        | Plant        | `A` = Jigani, `B` = Domlur |
-| 6        | Line         | `1`, `2`, `3` |
-| 7        | Shift        | `A`, `B`, `C` |
-| 8–9      | Day (dd)     | |
-| 10–11    | Month (mm)   | |
-| 12–13    | Year (yy)    | |
-| 14       | Machine      | `1`, `2` |
-| 15–20    | Serial Count | 6 digits |
-
-All 4 scanned modules **must be the same variant** (all Low Range or all
-High Range), matching M1's variant.
+21-character code, e.g. `VX156610-E1611109G260076`:
 
 ### Pack Serial Number / Pack QR (scanned on the Battery Pack ID screen)
 
-Pack QR format: `P{type_of_reess}:S{serial_number}`
+Pack QR format: `{type_of_reess}:{serial_number}`
 
 Example: `PVX156060:SA120260608006875`
 
@@ -79,16 +60,16 @@ TAC Number). Revision is no longer encoded in the QR data.
    continue from the corrected value.
 
 ### Battery Pack ID
-1. Scan the pack serial QR (`PVX...-V0:SA...`).
+1. Scan the pack serial QR (`VX...-0:SA...`).
 2. Variant, revision, serial number, and battery parameters
    (Rated Capacity, Max Voltage, RS Version, Model Number, TAC Number,
    SRB code, Made-in region, Mfg date) are auto-populated.
 3. The full battery pack ID label is **printed automatically**.
 4. Fields reset automatically, ready for the next scan.
 
-### BMS ID
-1. Configure variant and cell (admin-only); S/W version defaults from variant.
-2. Scan the BMS QR code (plain 9-digit or full `MODEL-SW-EXTRA-BMSID` format).
+### BMB/CMB ID
+1. Scan the Pack Qr Data (Dummy ID).
+2. Scan both BMB and CMB if
 3. If a full QR is scanned, the S/W version field updates from the scanned value.
 4. The BMS ID label (QR + BMS ID + S/W version) is **printed automatically**.
 5. Fields reset automatically, ready for the next scan.
@@ -104,9 +85,12 @@ normal print dialog (`pDatatype = "RAW"`).
 Each screen targets a specific printer name (`printing/constants.py`):
 
 ```python
+PRINTER_NAME    = "ZDesigner ZD421-300dpi ZPL"
+
 PRINTER_DUMMY   = "ZDesigner ZD421-300dpi ZPL"
 PRINTER_PACK_ID = "ZDesigner ZD421-300dpi ZPL (1)"
 PRINTER_BMS_ID  = "ZDesigner ZD421-300dpi ZPL (Copy 1)"
+(use these different names when you are testing all in one laptop or pc)
 ```
 
 If a named printer isn't found, the spooler falls back to a fuzzy
@@ -130,42 +114,86 @@ offline review).
 ## Project Structure
 
 ```
-bms_uv/
-├── main.py                      # Application entry point (logo, navigation, login)
-├── bms_uv.spec                  # PyInstaller spec (.exe build, icon = assets/logo.ico)
-├── assets/
-│   ├── logo.png                 # Header logo
-│   └── logo.ico                 # .exe / window icon
-├── auth/
-│   ├── session.py                # Login session state
-│   └── user_store.py             # Admin user credentials
-├── gui/
-│   ├── battery_pack_dummy.py     # Battery Pack Dummy ID screen
-│   ├── battery_pack_id.py        # Battery Pack ID screen
-│   ├── bms_id.py                 # BMS ID screen
-│   ├── battery_parameters.py     # Shared battery parameters panel
-│   ├── category_controls.py      # Domestic/export category + variant binding
-│   ├── constants.py               # Variant params, model prefixes, pack QR builder
-│   ├── layout.py                  # Shared fonts, spacing helpers
-│   ├── permissions.py             # Enable/disable widgets based on admin role
-│   ├── print_actions.py           # Print/save ZPL dispatch
-│   ├── scan_apply.py              # Apply parsed module ID fields to GUI vars
-│   └── scanner.py                 # Hardware scanner input binding
-├── nomenclature/
-│   ├── module_id.py               # Module ID parsing/building
-│   ├── serial_number.py           # Pack serial number parsing/building
-│   ├── bms_id.py                  # BMS ID / BMS QR parsing
-│   └── scan_handler.py            # Unified scan classifier (module/serial/BMS)
-├── printing/
-│   ├── zpl.py                     # ZPL label templates (3 fixed sizes)
-│   ├── labels.py                  # High-level label builders
-│   ├── spooler.py                 # Raw ZPL → Windows printer (ctypes/winspool)
-│   └── constants.py               # Printer names, label sizes, DPI
-├── session/
-│   └── pack_store.py              # Persisted pack serial number + auto-increment
-└── data/
-    ├── pack_session.json          # Stored current pack serial number
-    └── users.json                 # Admin credentials
+HV_LABEL_NEW
+│   .gitignore
+│   hv_main.spec                          # PyInstaller spec (.exe build, icon = assets/logo.ico)
+│   install_fonts.py
+│   main.py                               # Application entry point (logo, navigation, login)
+│   README.md
+│   test.py
+│   updates.md
+│                
+├───common
+│   │   login_screen.py
+│   │   paths.py
+│   │   
+│   ├───auth
+│   │   │   machine_lock.py               # Machine Authorization
+│   │   │   session.py                    # Login session state
+│   │   │   user_store.py                 # Admin user credentials
+│   │   │   __init__.py           
+│   │           
+│   ├───data
+│   │       .gitkeep
+│   │       users.json                    # user Credientials
+│   │       
+│   ├───nomenclature
+│   │   │   serial_number.py              # Common Serial number nomenclature (applicable to all)
+├───models
+│   ├───hv
+│   │   │   app.py                        # main application Window (HV) 
+│   │   │   
+│   │   ├───assets
+│   │   │       logo.ico                  # Header logo           
+│   │   │       logo.png                  # .exe / window icon
+│   │   │       
+│   │   ├───data
+│   │   │       .gitkeep
+│   │   │       bms_scan_log.xlsx
+│   │   │       pack_id_scan_log.xlsx
+│   │   │       pack_session.json
+│   │   │       scan_log.xlsx
+│   │   │       
+│   │   ├───gui
+│   │   │   │   admin_settings_dialog.py
+│   │   │   │   auth_bar.py
+│   │   │   │   auth_dialog.py
+│   │   │   │   battery_pack_dummy.py     # Battery Pack Dummy ID screen
+│   │   │   │   battery_pack_id.py        # Battery Pack ID screen
+│   │   │   │   battery_parameters.py     # Shared battery parameters panel
+│   │   │   │   bms_id.py                 # BMS ID screen
+│   │   │   │   category_controls.py      # Domestic/export category + variant binding
+│   │   │   │   constants.py              # Variant params, model prefixes, pack QR builder
+│   │   │   │   dummy_id.py               # Dummy id Manual Screen (Serial number only)
+│   │   │   │   layout.py                 # Shared fonts, spacing helpers
+│   │   │   │   permissions.py            # Enable/disable widgets based on admin role
+│   │   │   │   print_actions.py          # Print/save ZPL dispatch
+│   │   │   │   scanner.py                # Hardware scanner input binding
+│   │   │   │   scan_apply.py             # Apply parsed module ID fields to GUI vars
+│   │   │   │   scan_history.py           # Scanned Entries History Screen
+│   │   │   │   __init__.py
+│   │   │           
+│   │   ├───nomenclature
+│   │   │   │   bms_id.py                 # BMS ID / BMS QR parsing
+│   │   │   │   module_id.py              # Module ID parsing/building
+│   │   │   │   scan_handler.py           # Unified scan classifier (module/serial/BMS)
+│   │   │   │   serial_number.py          # Pack serial number parsing/building
+│   │   │   │   __init__.py
+│   │   │           
+│   │   ├───printing
+│   │   │   │   constants.py              # Printer names, label sizes, DPI
+│   │   │   │   labels.py                 # High-level label builders
+│   │   │   │   spooler.py                # Raw ZPL → Windows printer (ctypes/winspool)
+│   │   │   │   zpl.py                    # ZPL label templates (3 fixed sizes)
+│   │   │   │   __init__.py
+│   │   │           
+│   │   ├───session
+│   │   │   │   bms_scan_log.py           # BMS ID excel sheet with scan history
+│   │   │   │   pack_id_scan_log.py       # Pack ID Excel with Scan history
+│   │   │   │   pack_store.py             # Persisted pack serial number + auto-increment
+│   │   │   │   paths.py                  # file paths
+│   │   │   │   scan_log.py               # scan log entry file for all screens
+│   │   │   │   __init__.py
 ```
 
 ---
@@ -173,10 +201,10 @@ bms_uv/
 ## Building the .exe
 
 ```
-pyinstaller bms_uv.spec
+pyinstaller hv_main.spec
 ```
 
-Produces `dist/BMS/BMS.exe` with the ULTRAVIOLETTE logo as the application
+Produces `dist/HV_LABEL_PRINTER.exe` with the ULTRAVIOLETTE logo as the application
 icon, bundling `assets/` and `data/`.
 
 ---
@@ -184,7 +212,7 @@ icon, bundling `assets/` and `data/`.
 ## Requirements
 
 - Windows (raw ZPL printing uses the Windows print spooler API)
-- Python 3.10+
+- Python 3.14
 - Tkinter (bundled with standard Python on Windows)
 - Pillow (for logo image handling, if regenerating `assets/logo.ico`)
 - Three Zebra ZD421 printers installed with ZPL drivers, named as above
