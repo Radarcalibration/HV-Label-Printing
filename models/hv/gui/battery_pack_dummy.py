@@ -141,7 +141,7 @@ class BatteryPackDummyGUI:
         try:
             count = self.vars.get("serial_count")
             new_format = self._using_new_format()
-            pad = 5 if new_format else 6
+            pad = 6 if new_format else 6 #serial count increased to 6 digit (trial)
             count_str = count.get() if count is not None else "1".zfill(pad)
             count_str = (count_str or "1").zfill(pad)
             extra = self._new_format_kwargs() if new_format else {}
@@ -696,7 +696,7 @@ class BatteryPackDummyGUI:
         current = load_pack_serial()
         parsed = parse_serial_number(current) if current else None
         new_format = self._using_new_format()
-        default_count = "1".zfill(5 if new_format else 6)
+        default_count = "1".zfill(6 if new_format else 6) # serial count increase by 1 digit (previous was 5 digits)
         serial_count = parsed.serial_count if parsed is not None else self.vars.get("serial_count", tk.StringVar(value=default_count)).get()
         extra = self._new_format_kwargs() if new_format else {}
         try:
@@ -745,7 +745,7 @@ class BatteryPackDummyGUI:
             return True
         if not proposed.isdigit():
             return False
-        max_len = 5 if self._using_new_format() else 6
+        max_len = 6 if self._using_new_format() else 6
         return len(proposed) <= max_len
 
     def _on_serial_count_commit(self, _event: object = None) -> None:
@@ -754,8 +754,8 @@ class BatteryPackDummyGUI:
             return
 
         new_format = self._using_new_format()
-        pad = 5 if new_format else 6
-        max_value = 99999 if new_format else 999999
+        pad = 6 if new_format else 6 # serial count increasd by 1 digits (previous was 5 digits)
+        max_value = 999999 if new_format else 999999
 
         value = int(raw)
         if value < 1:

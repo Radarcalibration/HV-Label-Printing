@@ -18,7 +18,7 @@ from models.hv.gui.constants import (
 
 _SUB_PATTERN = re.compile(
     r"^(?P<variant>[C-F])"
-    r"(?P<group>[1-6])"
+    r"(?P<group>[1-3])"
     r"(?P<cell_mfr>[1-6])"
     r"(?P<plant>[123ABC])" #plant encoded (either 123 and ABC)
     r"(?P<line>[123])"
@@ -30,7 +30,7 @@ _SUB_PATTERN = re.compile(
 )
 
 _FULL_PATTERN = re.compile(
-    r"^(?P<part_number>VX15[0-9]{4})-(?P<sub>[C-F][1-6][1-6][123ABC][123][123]\d{2}[A-L]\d{6})$"
+    r"^(?P<part_number>VX15[0-9]{4})-(?P<sub>[C-F][1-6][1-6][123ABC][123][123]\d{2}[A-L]\d{4})$"
 )
 
 

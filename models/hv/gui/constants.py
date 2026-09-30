@@ -76,9 +76,9 @@ MODULE_VARIANT_CODES = {
 }
 VARIANT_BY_CODE = {v: k for k, v in MODULE_VARIANT_CODES.items()}
 
-GROUP_CODES = {f"G{i}": str(i) for i in range(1, 7)}
+GROUP_CODES = {f"G{i}": str(i) for i in range(1, 4)}
 GROUP_BY_CODE = {v: k for k, v in GROUP_CODES.items()}
-GROUP_OPTIONS = [f"G{i}" for i in range(1, 7)]
+GROUP_OPTIONS = [f"G{i}" for i in range(1, 4)]
 
 CELL_MFR_CODES = {
     "Molical":   "1",

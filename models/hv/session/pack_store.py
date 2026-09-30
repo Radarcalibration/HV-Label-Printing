@@ -97,7 +97,7 @@ def increment_pack_serial() -> str:
     if parsed is None:
         return current
 
-    pad = 5 if parsed.is_new_format else 6
+    pad = 6 if parsed.is_new_format else 6 # serial count increased by 1 digits (previous was 5 digits)
     new_count = str(int(parsed.serial_count) + 1).zfill(pad)
 
     extra = {}
