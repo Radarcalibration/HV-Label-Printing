@@ -6,16 +6,20 @@ VARIANT_TO_MODEL = {
     "12P": "VX156590",
     "16P": "VX156600",
     "24P": "VX156610",
-    "27P": "VX156620",
+    "27P": "VX155480", #VX156620 WAS PREVIOUS MODEL NO
 }
 
 MODEL_TO_VARIANT = {v: k for k, v in VARIANT_TO_MODEL.items()}
 
 REESS_BY_MODEL = {
-    "VX156620": "VX155800",
+    "VX155480": "VX155800",
     "VX156610": "VX156060",
     "VX156600": "VX156070",
     "VX156590": "VX156080",
+    # "VX156590": "VQ150000", # TRIAL PART NO
+    # "VX155480": "VQ150030",# TRIAL PART NO
+    # "VX156610": "VQ150020",# TRIAL PART NO
+    # "VX156600": "VQ150010",# TRIAL PART NO
 }
 
 REESS_TO_VARIANT = {reess: MODEL_TO_VARIANT[model] for model, reess in REESS_BY_MODEL.items()}
@@ -25,7 +29,8 @@ VARIANT_PARAMS = {
         "rated_capacity": "6 kWh",
         "max_voltage":    "116.2 V",
         "model_number":   "VX156590",
-        "type_of_reess":  "VX156080",
+        "type_of_reess":  "VX156080", # TRIAL PART NO
+        # "type_of_reess":  "VQ150000",
         "tac_number":     "AS8318",
         "emark":          "E11*136R01/00*0113*00",
         "energy_kwh":     "6 kWh",
@@ -34,7 +39,8 @@ VARIANT_PARAMS = {
         "rated_capacity": "8.1 kWh",
         "max_voltage":    "116.2 V",
         "model_number":   "VX156600",
-        "type_of_reess":  "VX156070",
+        "type_of_reess":  "VX156070", # TRIAL PART NO
+        # "type_of_reess":  "VQ150010",
         "tac_number":     "AS8317",
         "emark":          "E11*136R01/00*0112*00",
         "energy_kwh":     "8.1 kWh",
@@ -43,7 +49,8 @@ VARIANT_PARAMS = {
         "rated_capacity": "12.1 kWh",
         "max_voltage":    "116.2 V",
         "model_number":   "VX156610",
-        "type_of_reess":  "VX156060",
+        "type_of_reess":  "VX156060",# TRIAL PART NO
+        # "type_of_reess":  "VQ150020",
         "tac_number":     "AS8316",
         "emark":          "E11*136R01/00*0110*00",
         "energy_kwh":     "12.1 kWh",
@@ -51,8 +58,9 @@ VARIANT_PARAMS = {
     "27P": {
         "rated_capacity": "13.6 kWh",
         "max_voltage":    "116.2 V",
-        "model_number":   "VX156620",
-        "type_of_reess":  "VX155800",
+        "model_number":   "VX155480",
+        "type_of_reess":  "VX155800",# TRIAL PART NO
+        # "type_of_reess":  "VQ150030",
         "tac_number":     "AS8315",
         "emark":          "E11*136R01/00*0111*00",
         "energy_kwh":     "13.6 kWh",

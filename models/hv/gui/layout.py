@@ -26,6 +26,7 @@ def configure_styles(root: tk.Misc) -> None:
         "Plain.TEntry",
         borderwidth=0,
         relief="sunken", #flat
+        # relief="flat",
         padding=0,
         fieldbackground=style.lookup("TFrame", "background") or "SystemButtonFace",
     )

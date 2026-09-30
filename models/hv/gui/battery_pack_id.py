@@ -224,7 +224,7 @@ class BatteryPackIdGUI:
             self.root,
             zpl,
             self.print_var.get(),
-            default_name=f"pack_{serial_number}.zpl",
+            default_name=f"pack_no_{serial_number}.zpl",
             printer_name=PRINTER_PACK_ID,
         )
     

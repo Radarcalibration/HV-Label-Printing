@@ -41,8 +41,8 @@ _RESET_DELAY_MS = 100
 # def _format_date(dt: datetime) -> str:
 #     return format_date_display(dt.date())
 
-def _format_time(dt: datetime) -> str:
-    return dt.strftime("%I:%M:%S %p").lstrip("0")
+# def _format_time(dt: datetime) -> str:
+#     return dt.strftime("%I:%M:%S %p").lstrip("0")
 
 
 def _format_time(dt: datetime) -> str:

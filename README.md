@@ -32,7 +32,7 @@ ULTRAVIOLETTE logo and provides admin login for editing locked fields.
 
 Pack QR format: `{type_of_reess}:{serial_number}`
 
-Example: `PVX156060:SA120260608006875`
+Example: `VX156060:A120260608006875`
 
 - `type_of_reess` → the REESS number for the variant (e.g. `VX156060` for 24P)
 - `serial_number` → e.g. `A120260608006875` (plant, line, date, 6-digit count)
@@ -60,7 +60,7 @@ TAC Number). Revision is no longer encoded in the QR data.
    continue from the corrected value.
 
 ### Battery Pack ID
-1. Scan the pack serial QR (`VX...-0:SA...`).
+1. Scan the pack serial QR (`VX...:A...`).
 2. Variant, revision, serial number, and battery parameters
    (Rated Capacity, Max Voltage, RS Version, Model Number, TAC Number,
    SRB code, Made-in region, Mfg date) are auto-populated.
