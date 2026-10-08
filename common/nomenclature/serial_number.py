@@ -13,7 +13,7 @@ PLANT_BY_CODE = {code: name for name, code in PLANT_CODES.items()}
 
 SERIAL_NUMBER_PATTERN = re.compile(
     r"^(?P<plant>[AB])(?P<line>[123])(?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})"
-    r"(?P<serial_count>\d{6})$"
+    r"(?P<serial_count>\d{5})$" #serial count trial
 )
 
 # -- NEW format code 
@@ -57,7 +57,7 @@ SHIFT_CODES_NEW = {"A": "A", "B": "B", "C": "C"}
 NEW_SERIAL_NUMBER_PATTERN = re.compile(
     r"^(?P<plant>[ABC])(?P<model>[ABCD])(?P<variant>A[3-6])(?P<line>[123])"
     r"(?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})"
-    r"(?P<category>[12])(?P<shift>[ABC])(?P<serial_count>\d{6})$"
+    r"(?P<category>[12])(?P<shift>[ABC])(?P<serial_count>\d{5})$" # serial count trial
 )
 
 
@@ -116,7 +116,7 @@ def build_serial_number(
         if line not in {"1", "2", "3"}:
             raise ValueError(f"Unsupported line: {line}")
 
-        count = re.sub(r"\D", "", serial_count or "").zfill(6)[-6:]
+        count = re.sub(r"\D", "", serial_count or "").zfill(5)[-5:] # serial count trial
 
         return f"{PLANT_CODES[plant_key]}{line}{when:%Y%m%d}{count}"
 
@@ -142,7 +142,7 @@ def build_serial_number(
     if category_key not in CATEGORY_CODES_NEW:
         raise ValueError(f"Unsupported category: {category}")
 
-    count = re.sub(r"\D", "", serial_count or "").zfill(6)[-6:] # serial count increase to 6 digits, previous was 5
+    count = re.sub(r"\D", "", serial_count or "").zfill(5)[-5:] # serial count increase to 6 digits, previous was 5 trial
 
     return (
         f"{NEW_PLANT_CODES[plant_key]}"

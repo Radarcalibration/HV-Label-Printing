@@ -26,20 +26,30 @@ ULTRAVIOLETTE logo and provides admin login for editing locked fields.
 
 ### Module ID (scanned on the Battery Pack Dummy screen)
 
-21-character code, e.g. `VX156610-E1611109G260076`:
+Module model numbers depend on the cell manufacturer, e.g. `VX156610-E1611109G260076`
+for a Ten Power 24P module or `VQ150060-E1311109G260076` for BAK:
 
 ### Pack Serial Number / Pack QR (scanned on the Battery Pack ID screen)
 
-Pack QR format: `{type_of_reess}:{serial_number}`
+Pack QR format: `{type_of_reess}:{serial_number}`. The REESS prefix identifies
+the cell manufacturer as well as the variant.
 
-Example: `VX156060:A120260608006875`
+Examples: `VX156060:A12026060806875` (Ten Power 24P) and
+`VQ150020:A12026060806875` (BAK 24P).
 
-- `type_of_reess` → the REESS number for the variant (e.g. `VX156060` for 24P)
-- `serial_number` → e.g. `A120260608006875` (plant, line, date, 6-digit count)
+- `type_of_reess` → the REESS number for the cell-manufacturer/variant pair
+- `serial_number` → e.g. `A12026060806875` (plant, line, date, 5-digit count)
 
-Scanning this auto-fills the variant and serial number, and refreshes all
+Scanning this auto-fills the cell manufacturer, variant, and serial number, and refreshes all
 battery parameters (Rated Capacity, Max Voltage, RS Version, Model Number,
 TAC Number). Revision is no longer encoded in the QR data.
+
+| Variant | Ten Power model / REESS | BAK model / REESS |
+|---------|-------------------------|------------------|
+| 12P | VX156590 / VX156080 | VQ150040 / VQ150000 |
+| 16P | VX156600 / VX156070 | VQ150050 / VQ150010 |
+| 24P | VX156610 / VX156060 | VQ150060 / VQ150020 |
+| 27P | VX155480 / VX155800 | VQ150070 / VQ150030 |
 
 ---
 

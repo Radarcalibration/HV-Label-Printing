@@ -7,7 +7,10 @@ import re
 from dataclasses import dataclass#, field
 from enum import Enum
 
-from models.hv.gui.constants import REESS_TO_VARIANT
+from models.hv.gui.constants import (
+    REESS_TO_VARIANT,
+    get_cell_mfr_from_reess,
+)
 from models.hv.nomenclature.bms_id import parse_bmb_cmb_id, parse_bms_id, parse_bms_qr
 from models.hv.nomenclature.module_id import ParsedModuleId, parse_module_id
 from models.hv.nomenclature.serial_number import ParsedSerialNumber, parse_serial_number
@@ -40,6 +43,7 @@ class ScanResult:
     bmb_cmb: object | None = None  
     pack_variant: str | None = None 
     pack_revision: str | None = None  
+    cell_mfr: str | None = None
 
 
 def identify_scan(value: str) -> ScanResult:
@@ -54,12 +58,15 @@ def identify_scan(value: str) -> ScanResult:
         serial = parse_serial_number(serial_raw)
         if serial is not None:
             variant = VARIANT_BY_REESS.get(reess_part)
+            if variant and serial.variant and variant != serial.variant:
+                return ScanResult(raw=cleaned.upper(), scan_type=ScanType.UNKNOWN)
             return ScanResult(
                 raw=cleaned.upper(),
                 scan_type=ScanType.SERIAL_NUMBER,
                 serial=serial,
                 pack_variant=variant,
                 pack_revision=None,
+                cell_mfr=get_cell_mfr_from_reess(reess_part),
             )
 
     module = parse_module_id(cleaned)

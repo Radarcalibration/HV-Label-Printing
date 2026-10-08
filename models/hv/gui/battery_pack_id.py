@@ -46,6 +46,7 @@ class BatteryPackIdGUI:
         self._serial_number_entry: ttk.Entry | None = None
         self.category_var = tk.StringVar(value="Domestic")
         self.variant_var = tk.StringVar(value=VARIANT_OPTIONS[-1])
+        self.cell_mfr_var = tk.StringVar(value="")
         self.scanner_var = tk.StringVar()
         self.print_var = tk.StringVar(value="print")
 
@@ -78,12 +79,19 @@ class BatteryPackIdGUI:
 
         row = ttk.Frame(config_frame)
         row.pack(fill=tk.X)
-        configure_equal_columns(row, 2)
+        configure_equal_columns(row, 3)
 
         self._category_combo = add_category_field(row, self.category_var, grid_column=0)
         self._variant_combo = self._add_config_dropdown(
             row, 1, "Variant", self.variant_var, VARIANT_OPTIONS
         )
+        manufacturer_frame = ttk.Frame(row)
+        manufacturer_frame.grid(row=0, column=2, sticky="nsew", padx=(0, 10))
+        ttk.Label(manufacturer_frame, text="Cell Manufacturer", font=LABEL_FONT).pack(anchor=tk.W)
+        manufacturer_value = ttk.Label(
+            manufacturer_frame, textvariable=self.cell_mfr_var, font=FIELD_FONT, anchor=tk.W
+        )
+        manufacturer_value.pack(fill=tk.X, pady=(5, 0), ipady=FIELD_IPADY)
 
         if self._variant_combo is not None:
             bind_category_variant(
@@ -125,12 +133,13 @@ class BatteryPackIdGUI:
         params = VARIANT_PARAMS.get(variant, VARIANT_PARAMS[VARIANT_OPTIONS[-1]])
 
         category = self.category_var.get()
+        cell_mfr = self.cell_mfr_var.get()
 
         set_battery_parameters(
             self._param_labels,
             rated_capacity=params["rated_capacity"],
             max_voltage=params["max_voltage"],
-            model_number=get_type_of_reess(variant),
+            model_number=get_type_of_reess(variant, cell_mfr) if cell_mfr else "",
             tac_number=params["tac_number"],
             emark=params["emark"],
             category=category,
@@ -167,6 +176,8 @@ class BatteryPackIdGUI:
         if self._param_labels:
             for widget in self._param_labels.values():
                 widget.configure(text="")
+        self.cell_mfr_var.set("")
+        self._on_variant_change()
 
     def _open_history(self) -> None:
         open_scan_history(
@@ -206,6 +217,7 @@ class BatteryPackIdGUI:
         pack_qr_data = format_pack_qr_data(
             variant=self.variant_var.get(),
             serial_number=serial_number,
+            cell_mfr=self.cell_mfr_var.get(),
         )
 
         zpl = build_battery_pack_id_label(
@@ -218,6 +230,7 @@ class BatteryPackIdGUI:
             category=category,
             mfg_date=self._mfg_date_for_serial(serial_number),
             pack_qr_data=pack_qr_data,
+            cell_mfr=self.cell_mfr_var.get(),
         )
         self._store_serial_if_present()
         dispatch_zpl(
@@ -254,7 +267,7 @@ class BatteryPackIdGUI:
         self.scanner_var.set(result.raw)
 
         if result.scan_type == ScanType.SERIAL_NUMBER and result.serial is not None:
-            if result.pack_variant is None:
+            if result.pack_variant is None or result.cell_mfr is None:
                 self.scanner_var.set("")
                 messagebox.showwarning(
                     "Scan", "Serial Number scanned. Expecting a Pack QR or bmb_cmb code.", parent=self.root
@@ -263,6 +276,7 @@ class BatteryPackIdGUI:
 
             self.scanner_var.set("")  
             self.serial_number_var.set(result.serial.raw)
+            self.cell_mfr_var.set(result.cell_mfr)
             
             if result.pack_variant:
                 self.variant_var.set(result.pack_variant)

@@ -505,3 +505,45 @@ https://org0b27d314.api.crm8.dynamics.com/api/data/v9.2
 Learn more
 Discovery endpoint
 https://globaldisco.crm8.dynamics.com/api/discovery/v2.0/Instances
+
+Name - Ultraviolette Automotive Private Limited
+
+Tenant ID - 12e21b39-4efe-4165-a423-387287d871f3
+
+Primary domain - ultraviolette.com
+
+License - Microsoft Entra ID P2
+
+Radar Calibration - 50498db0-2f60-4fb0-ba72-f6dac83500f4
+
+The supplied Dataverse endpoint and tenant ID are now supported by the Python configuration. It accepts either the organization URL or the full  /api/data/v9.2  endpoint; the tenant ID can be supplied through  HV_ENTRA_TENANT_ID . I also updated the README and added a test for the endpoint format you provided. All 9 Dataverse client tests pass.
+
+This is still a client foundation, not a live Dataverse connection. Authentication and table operations are not wired in. The next step needs the Entra public-client app ID and the exact Dataverse table/entity-set and column logical names (plus the serial-allocation Custom API name and parameters, if it exists). No client secret or access token is needed.
+
+For the next step—sign-in setup—I need one non-secret value:
+
+1. Microsoft Entra public-client Application (client) ID for the desktop app.
+
+If you haven’t registered the app yet, tell me “not created” and I’ll guide you through creating it. It must be a public/native client using delegated sign-in—don’t create or send a client secret.
+
+Later, to connect the app’s records, we’ll need the Dataverse table and column logical names, plus the serial-allocation Custom API details if one exists. We can retrieve much of that metadata after sign-in is configured. The Dataverse URL and tenant ID you already shared are enough for the environment configuration.
+
+# 5 
+
+
+I have completed Dataverse table and metadata setup.
+
+I do not currently have Microsoft Entra App Registration access.
+
+Generate the complete Python service layer architecture using mock repositories so development can continue until Tenant ID and Client ID are provided by IT.
+
+Do not require authentication implementation.
+Focus on interfaces, repositories, workflows, and integration points.
+
+# 6
+
+Added a mock-backed Python service layer so backend development can proceed without Entra registration or Dataverse access. It introduces typed models and repository interfaces for serial allocation, scan/pack/BMB-CMB traceability, label instances, production events, and print attempts, plus a thread-safe in-memory repository and service factory.
+
+The mock enforces scoped, idempotent serial allocation; pack/label consistency; and print-attempt history with reprint reasons. The existing Tkinter screens, ZPL generation, and printer communication were not changed, and the new services are not yet wired into the current workflows. Local JSON and Excel persistence therefore remain in use. The README documents the boundary and mock’s in-memory-only behavior.
+
+Validation: all 20 tests pass, and the new files compile. I left the existing unrelated  zpl.py  modification untouched.

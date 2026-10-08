@@ -2,35 +2,57 @@ from __future__ import annotations
 
 VARIANT_OPTIONS = ["12P", "16P", "24P", "27P"] #33p and 48p are low voltage type, 8p and 10p are shockwave type.
 
-VARIANT_TO_MODEL = {
-    "12P": "VX156590",
-    "16P": "VX156600",
-    "24P": "VX156610",
-    "27P": "VX155480", #VX156620 WAS PREVIOUS MODEL NO
+VARIANT_TO_MODEL_BY_CELL_MFR = {
+    "Ten Power": {
+        "12P": "VX156590",
+        "16P": "VX156600",
+        "24P": "VX156610",
+        "27P": "VX155480",
+    },
+    "BAK": {
+        "12P": "VQ150040",
+        "16P": "VQ150050",
+        "24P": "VQ150060",
+        "27P": "VQ150070",
+    },
 }
 
-MODEL_TO_VARIANT = {v: k for k, v in VARIANT_TO_MODEL.items()}
-
-REESS_BY_MODEL = {
-    "VX155480": "VX155800",
-    "VX156610": "VX156060",
-    "VX156600": "VX156070",
-    "VX156590": "VX156080",
-    # "VX156590": "VQ150000", # TRIAL PART NO
-    # "VX155480": "VQ150030",# TRIAL PART NO
-    # "VX156610": "VQ150020",# TRIAL PART NO
-    # "VX156600": "VQ150010",# TRIAL PART NO
+REESS_BY_MODEL_BY_CELL_MFR = {
+    "Ten Power": {
+        "VX155480": "VX155800",
+        "VX156610": "VX156060",
+        "VX156600": "VX156070",
+        "VX156590": "VX156080",
+    },
+    "BAK": {
+        "VQ150040": "VQ150000",
+        "VQ150070": "VQ150030",
+        "VQ150060": "VQ150020",
+        "VQ150050": "VQ150010",
+    },
 }
 
-REESS_TO_VARIANT = {reess: MODEL_TO_VARIANT[model] for model, reess in REESS_BY_MODEL.items()}
+# BAK-based compatibility maps for callers still using the original constants.
+VARIANT_TO_MODEL = VARIANT_TO_MODEL_BY_CELL_MFR["BAK"]
+MODEL_TO_VARIANT = {model: variant for variant, model in VARIANT_TO_MODEL.items()}
+REESS_BY_MODEL = REESS_BY_MODEL_BY_CELL_MFR["BAK"]
+REESS_TO_VARIANT: dict[str, str] = {}
+for _cell_mfr, _models in VARIANT_TO_MODEL_BY_CELL_MFR.items():
+    _reess_by_model = REESS_BY_MODEL_BY_CELL_MFR[_cell_mfr]
+    for _variant, _model in _models.items():
+        REESS_TO_VARIANT[_reess_by_model[_model]] = _variant
+CELL_MFR_BY_REESS: dict[str, str] = {
+    reess: cell_mfr
+    for cell_mfr, model_map in REESS_BY_MODEL_BY_CELL_MFR.items()
+    for reess in model_map.values()
+}
 
 VARIANT_PARAMS = {
     "12P": {
         "rated_capacity": "6 kWh",
         "max_voltage":    "116.2 V",
-        "model_number":   "VX156590",
-        "type_of_reess":  "VX156080", # TRIAL PART NO
-        # "type_of_reess":  "VQ150000",
+        "model_number":   "VQ150040",
+        "type_of_reess":  "VQ150000",
         "tac_number":     "AS8318",
         "emark":          "E11*136R01/00*0113*00",
         "energy_kwh":     "6 kWh",
@@ -38,9 +60,8 @@ VARIANT_PARAMS = {
     "16P": {
         "rated_capacity": "8.1 kWh",
         "max_voltage":    "116.2 V",
-        "model_number":   "VX156600",
-        "type_of_reess":  "VX156070", # TRIAL PART NO
-        # "type_of_reess":  "VQ150010",
+        "model_number":   "VQ150050",
+        "type_of_reess":  "VQ150010",
         "tac_number":     "AS8317",
         "emark":          "E11*136R01/00*0112*00",
         "energy_kwh":     "8.1 kWh",
@@ -48,9 +69,8 @@ VARIANT_PARAMS = {
     "24P": {
         "rated_capacity": "12.1 kWh",
         "max_voltage":    "116.2 V",
-        "model_number":   "VX156610",
-        "type_of_reess":  "VX156060",# TRIAL PART NO
-        # "type_of_reess":  "VQ150020",
+        "model_number":   "VQ150060",
+        "type_of_reess":  "VQ150020",
         "tac_number":     "AS8316",
         "emark":          "E11*136R01/00*0110*00",
         "energy_kwh":     "12.1 kWh",
@@ -58,9 +78,8 @@ VARIANT_PARAMS = {
     "27P": {
         "rated_capacity": "13.6 kWh",
         "max_voltage":    "116.2 V",
-        "model_number":   "VX155480",
-        "type_of_reess":  "VX155800",# TRIAL PART NO
-        # "type_of_reess":  "VQ150030",
+        "model_number":   "VQ150070",
+        "type_of_reess":  "VQ150030",
         "tac_number":     "AS8315",
         "emark":          "E11*136R01/00*0111*00",
         "energy_kwh":     "13.6 kWh",
@@ -150,28 +169,34 @@ def variants_for_category(category: str) -> list[str]:
     return list(VARIANT_OPTIONS)
 
 
-def format_pack_qr_data(*, variant: str, serial_number: str) -> str:
-    reess = get_type_of_reess(variant)
+def format_pack_qr_data(*, variant: str, serial_number: str, cell_mfr: str) -> str:
+    reess = get_type_of_reess(variant, cell_mfr)
+    if reess == "NA":
+        raise ValueError(f"Unsupported variant/cell manufacturer: {variant}/{cell_mfr}")
     return f"{reess}:{serial_number.strip()}"
 
 
-def get_model_number(variant: str) -> str:
-    return VARIANT_TO_MODEL.get(variant.strip(), "")
+def get_model_number(variant: str, cell_mfr: str) -> str:
+    return VARIANT_TO_MODEL_BY_CELL_MFR.get(cell_mfr.strip(), {}).get(variant.strip(), "")
 
 
-def get_part_number(variant: str) -> str:
-    return get_model_number(variant)
+def get_part_number(variant: str, cell_mfr: str) -> str:
+    return get_model_number(variant, cell_mfr)
 
 
-def get_full_model_number(variant: str, revision: str) -> str:
-    part = get_part_number(variant)
+def get_full_model_number(variant: str, revision: str, cell_mfr: str) -> str:
+    part = get_part_number(variant, cell_mfr)
     revision = (revision or "").strip().upper()
     return f"{part}-{revision}" if part and revision else part
 
 
-def get_type_of_reess(variant: str) -> str:
-    model = get_model_number(variant)
-    return REESS_BY_MODEL.get(model, "NA")
+def get_type_of_reess(variant: str, cell_mfr: str) -> str:
+    model = get_model_number(variant, cell_mfr)
+    return REESS_BY_MODEL_BY_CELL_MFR.get(cell_mfr.strip(), {}).get(model, "NA")
+
+
+def get_cell_mfr_from_reess(reess: str) -> str | None:
+    return CELL_MFR_BY_REESS.get(reess.strip().upper())
 
 
 def get_tac_number(variant: str) -> str:

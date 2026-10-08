@@ -5,7 +5,12 @@ from datetime import datetime
 from tkinter import messagebox, ttk
 
 from models.hv.gui.battery_parameters import build_battery_parameters_panel, set_battery_parameters
-from models.hv.gui.constants import VARIANT_OPTIONS, VARIANT_PARAMS, format_pack_qr_data, get_type_of_reess
+from models.hv.gui.constants import (
+    VARIANT_OPTIONS,
+    VARIANT_PARAMS,
+    format_pack_qr_data,
+    get_type_of_reess,
+)
 from models.hv.gui.layout import FIELD_FONT, FIELD_IPADY, HEADING_FONT, LABEL_FONT
 from models.hv.gui.print_actions import dispatch_zpl
 from models.hv.gui.scan_history import open_scan_history
@@ -41,6 +46,7 @@ class DummyIdGUI:
             self.host = parent
 
         self.serial_entry_var = tk.StringVar()
+        self.cell_mfr_var = tk.StringVar(value="")
         self.print_var = tk.StringVar(value="print")
         self._parsed_serial = None
 
@@ -89,6 +95,8 @@ class DummyIdGUI:
 
     # ── Serial entry → details popup
     def _on_serial_submitted(self, raw: str) -> None:
+        self._parsed_serial = None
+        self.cell_mfr_var.set("")
         result = identify_scan(raw)
         if result.scan_type != ScanType.SERIAL_NUMBER or result.serial is None:
             messagebox.showwarning(
@@ -98,7 +106,16 @@ class DummyIdGUI:
             self.serial_entry_var.set("")
             return
 
+        if not result.cell_mfr:
+            messagebox.showwarning(
+                "Cell Manufacturer",
+                "Scan a pack QR code with a recognized REESS prefix to identify the cell manufacturer.",
+                parent=self.root,
+            )
+            self.serial_entry_var.set("")
+            return
         self._parsed_serial = result.serial
+        self.cell_mfr_var.set(result.cell_mfr)
         self.serial_entry_var.set(result.serial.raw)
         self._open_details_popup(preselect_variant=result.pack_variant)
 
@@ -115,7 +132,8 @@ class DummyIdGUI:
         ttk.Label(frame, text="Enter Pack Details", font=HEADING_FONT).grid(
             row=0, column=0, columnspan=2, sticky=tk.W, pady=(0, 10)
         )
-
+        ttk.Label(frame, text="Cell Manufacturer").grid(row=1, column=0, sticky=tk.W, pady=3, padx=(0, 10))
+        ttk.Label(frame, textvariable=self.cell_mfr_var).grid(row=1, column=1, sticky=tk.W, pady=3)
 
         parsed = self._parsed_serial
         is_new_format = parsed is not None and parsed.is_new_format
@@ -127,7 +145,7 @@ class DummyIdGUI:
         )
         ref_no_var = tk.StringVar()
 
-        next_row = 1
+        next_row = 2
         if not is_new_format:
             ttk.Label(frame, text="Variant").grid(row=next_row, column=0, sticky=tk.W, pady=3, padx=(0, 10))
             ttk.Combobox(
@@ -151,6 +169,7 @@ class DummyIdGUI:
             popup.destroy()
             self.serial_entry_var.set("") #clear the scan box
             self._parsed_serial = None
+            self.cell_mfr_var.set("")
 
         btn_row = ttk.Frame(frame)
         btn_row.grid(row=next_row, column=0, columnspan=2, sticky="e", pady=(12, 0))
@@ -176,12 +195,11 @@ class DummyIdGUI:
         category = "Export" if parsed.is_new_format and parsed.is_export else "Domestic"
 
         params = VARIANT_PARAMS.get(variant, VARIANT_PARAMS[VARIANT_OPTIONS[-1]])
-        model_number = get_type_of_reess(variant)
+        cell_mfr = self.cell_mfr_var.get()
+        model_number = get_type_of_reess(variant, cell_mfr)
         mfg_date = parsed.format_date()
-        
-        # pack_id = ttk.Combobox(self.root).grid(row=0, column=2, sticky="news")
 
-        pack_qr = format_pack_qr_data(variant=variant, serial_number=serial)
+        pack_qr = format_pack_qr_data(variant=variant, serial_number=serial, cell_mfr=cell_mfr)
 
         set_battery_parameters(
             self._param_labels,
@@ -203,6 +221,7 @@ class DummyIdGUI:
             mfg_date=mfg_date,
             variant=variant,
             category=category,
+            cell_mfr=cell_mfr,
         )
 
         dispatch_zpl(self.root, zpl, self.print_var.get(), default_name=f"dummy_{serial}.zpl", printer_name=PRINTER_DUMMY)
@@ -232,6 +251,7 @@ class DummyIdGUI:
 
         self.serial_entry_var.set("")
         self._parsed_serial = None
+        self.cell_mfr_var.set("")
 
     def _open_history(self) -> None:
         open_scan_history(self.root, print_mode=self.print_var.get(), origin="dummy")

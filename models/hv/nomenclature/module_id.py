@@ -13,7 +13,7 @@ from models.hv.gui.constants import (
     PLANT_CODES_HV, PLANT_BY_CODE_HV,
     SHIFT_CODES_HV,
     MONTH_CODES, MONTH_BY_CODE,
-    VARIANT_TO_MODEL,
+    get_model_number,
 )
 
 _SUB_PATTERN = re.compile(
@@ -30,7 +30,7 @@ _SUB_PATTERN = re.compile(
 )
 
 _FULL_PATTERN = re.compile(
-    r"^(?P<part_number>VX15[0-9]{4})-(?P<sub>[C-F][1-6][1-6][123ABC][123][123]\d{2}[A-L]\d{4})$"
+    r"^(?P<part_number>V[QX]15[0-9]{4})-(?P<sub>[C-F][1-3][1-6][123ABC][123][123]\d{2}[A-L]\d{2}\d{4})$"
 )
 
 
@@ -111,9 +111,9 @@ def build_full_module_id(
     shift: str,
     serial: str,
 ) -> str:
-    part_number = VARIANT_TO_MODEL.get(variant.strip())
+    part_number = get_model_number(variant, cell_mfr)
     if not part_number:
-        raise ValueError(f"Unknown variant: {variant}")
+        raise ValueError(f"Unsupported variant/cell manufacturer: {variant}/{cell_mfr}")
     sub = build_module_sub_id(
         variant=variant, group=group, cell_mfr=cell_mfr,
         plant=plant, line=line, when=when, shift=shift, serial=serial,
@@ -171,7 +171,7 @@ def parse_module_id(value: str) -> ParsedModuleId | None:
     if not all([variant, cell_mfr, plant, group, month]):
         return None
 
-    if VARIANT_TO_MODEL.get(variant) != part_number:
+    if get_model_number(variant, cell_mfr) != part_number:
         return None
 
     year  = 2000 + int(g["yy"])

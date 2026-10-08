@@ -214,9 +214,12 @@ class ScanHistoryDialog(tk.Toplevel):
             return
 
         from models.hv.gui.constants import VARIANT_PARAMS, get_type_of_reess
+        from models.hv.nomenclature.scan_handler import identify_scan
         variant = rec.variant.strip() if rec.variant.strip() in VARIANT_OPTIONS else self._variant
+        scan = identify_scan(rec.dummy_pack_qr)
+        cell_mfr = scan.cell_mfr or ""
         params = VARIANT_PARAMS.get(variant, VARIANT_PARAMS[VARIANT_OPTIONS[-1]])
-        model_number = get_type_of_reess(variant)
+        model_number = get_type_of_reess(variant, cell_mfr)
 
         
         category = "Domestic"
@@ -247,11 +250,12 @@ class ScanHistoryDialog(tk.Toplevel):
 
         from models.hv.gui.constants import VARIANT_PARAMS, get_type_of_reess
         variant = rec.variant.strip() if rec.variant.strip() in VARIANT_OPTIONS else (result.pack_variant or self._variant)
+        cell_mfr = result.cell_mfr or ""
         serial_number = rec.serial_number or result.serial.raw
         
         category = "Domestic"
         params = VARIANT_PARAMS.get(variant, VARIANT_PARAMS[VARIANT_OPTIONS[-1]])
-        model_number = get_type_of_reess(variant)
+        model_number = get_type_of_reess(variant, cell_mfr)
 
         zpl = build_battery_pack_id_label(
             serial_number=serial_number,
@@ -263,6 +267,7 @@ class ScanHistoryDialog(tk.Toplevel):
             category=category,
             mfg_date=rec.date,
             pack_qr_data=rec.pack_qr_data,
+            cell_mfr=cell_mfr,
         )
         dispatch_zpl(self, zpl, self._print_mode, default_name=f"reprint_pack_id_{idx+1}.zpl", printer_name=PRINTER_DUMMY)
         self._status_var.set(f"Reprinted (Battery Pack ID) row {idx + 1}")
