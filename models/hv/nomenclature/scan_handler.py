@@ -1,7 +1,7 @@
+from __future__ import annotations
 """Pack serial QR format:  VX156060:A120260608006675
 VX156060:ABA51202605281A00111  #VX156060:ABA51202605281A123456
 """
-from __future__ import annotations
 
 import re
 from dataclasses import dataclass#, field
