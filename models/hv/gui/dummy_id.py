@@ -109,7 +109,7 @@ class DummyIdGUI:
 
         self._parsed_serial = result.serial
         self.cell_mfr_var.set(
-            result.cell_mfr if result.cell_mfr in DUMMY_CELL_MFR_OPTIONS else ""
+            result.cell_mfr if result.cell_mfr in DUMMY_CELL_MFR_OPTIONS else "Select"
         )
         self.serial_entry_var.set(result.serial.raw)
         self._open_details_popup(preselect_variant=result.pack_variant)
@@ -163,7 +163,7 @@ class DummyIdGUI:
             if self.cell_mfr_var.get() not in DUMMY_CELL_MFR_OPTIONS:
                 messagebox.showwarning(
                     "Cell Manufacturer",
-                    "Select a cell manufacturer before continuing.",
+                    "Select a cell manufacturer first.",
                     parent=popup,
                 )
                 return
