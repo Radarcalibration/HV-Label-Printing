@@ -32,16 +32,16 @@ REESS_BY_MODEL_BY_CELL_MFR = {
     },
 }
 
-# BAK-based compatibility maps for callers still using the original constants.
+# Keep the original single-manufacturer maps available for existing callers.
 VARIANT_TO_MODEL = VARIANT_TO_MODEL_BY_CELL_MFR["BAK"]
 MODEL_TO_VARIANT = {model: variant for variant, model in VARIANT_TO_MODEL.items()}
 REESS_BY_MODEL = REESS_BY_MODEL_BY_CELL_MFR["BAK"]
-REESS_TO_VARIANT: dict[str, str] = {}
+REESS_TO_VARIANT = {}
 for _cell_mfr, _models in VARIANT_TO_MODEL_BY_CELL_MFR.items():
     _reess_by_model = REESS_BY_MODEL_BY_CELL_MFR[_cell_mfr]
     for _variant, _model in _models.items():
         REESS_TO_VARIANT[_reess_by_model[_model]] = _variant
-CELL_MFR_BY_REESS: dict[str, str] = {
+CELL_MFR_BY_REESS = {
     reess: cell_mfr
     for cell_mfr, model_map in REESS_BY_MODEL_BY_CELL_MFR.items()
     for reess in model_map.values()
@@ -171,8 +171,6 @@ def variants_for_category(category: str) -> list[str]:
 
 def format_pack_qr_data(*, variant: str, serial_number: str, cell_mfr: str) -> str:
     reess = get_type_of_reess(variant, cell_mfr)
-    if reess == "NA":
-        raise ValueError(f"Unsupported variant/cell manufacturer: {variant}/{cell_mfr}")
     return f"{reess}:{serial_number.strip()}"
 
 
@@ -199,6 +197,10 @@ def get_cell_mfr_from_reess(reess: str) -> str | None:
     return CELL_MFR_BY_REESS.get(reess.strip().upper())
 
 
+def get_variant_from_reess(reess: str) -> str | None:
+    return REESS_TO_VARIANT.get(reess.strip().upper())
+
+
 def get_tac_number(variant: str) -> str:
     return VARIANT_PARAMS.get(variant.strip(), {}).get("tac_number", "NA")
 
@@ -219,8 +221,8 @@ def get_emark_res_code(variant: str) -> str:
     import re as _re
     raw = get_emark(variant)
     match = _re.match(r"E(\d+)\*(\d+)R(\d+)/\d+\*(\d+)\*\d+", raw)
-    if not match:
-        return "NA"
+    if not match: 
+        return "NA" 
     _e_num, prefix, r_num, suffix = match.groups()
     return f"{prefix}RES-{r_num}{suffix}"
 

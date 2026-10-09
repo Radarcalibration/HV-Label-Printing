@@ -242,9 +242,9 @@ class BatteryPackDummyGUI:
             self.vars[key] = tk.StringVar(value=default)
 
         bind_category_variant(
-            self.vars["category"],   
-            self.vars["variant"],    
-            self._widgets["variant"], 
+            self.vars["category"],
+            self.vars["variant"],
+            self._widgets["variant"],
             self._on_variant_or_revision_change,
         )
         for key in ("variant", "category", "plant", "line", "pack_id_format", "pack_shift"):

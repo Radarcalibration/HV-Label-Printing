@@ -23,6 +23,7 @@ from models.hv.session.scan_log import ScanRecord, append_scan_record
 
 MODULE_PLACEHOLDER_TEXT = "Module Level Completed"
 INTEGRATION_STATUS_TEXT = "INTEGRATION OK"
+DUMMY_CELL_MFR_OPTIONS = ("BAK", "Ten Power")
 
 
 class DummyIdGUI:
@@ -106,16 +107,10 @@ class DummyIdGUI:
             self.serial_entry_var.set("")
             return
 
-        if not result.cell_mfr:
-            messagebox.showwarning(
-                "Cell Manufacturer",
-                "Scan a pack QR code with a recognized REESS prefix to identify the cell manufacturer.",
-                parent=self.root,
-            )
-            self.serial_entry_var.set("")
-            return
         self._parsed_serial = result.serial
-        self.cell_mfr_var.set(result.cell_mfr)
+        self.cell_mfr_var.set(
+            result.cell_mfr if result.cell_mfr in DUMMY_CELL_MFR_OPTIONS else ""
+        )
         self.serial_entry_var.set(result.serial.raw)
         self._open_details_popup(preselect_variant=result.pack_variant)
 
@@ -133,7 +128,13 @@ class DummyIdGUI:
             row=0, column=0, columnspan=2, sticky=tk.W, pady=(0, 10)
         )
         ttk.Label(frame, text="Cell Manufacturer").grid(row=1, column=0, sticky=tk.W, pady=3, padx=(0, 10))
-        ttk.Label(frame, textvariable=self.cell_mfr_var).grid(row=1, column=1, sticky=tk.W, pady=3)
+        ttk.Combobox(
+            frame,
+            textvariable=self.cell_mfr_var,
+            values=DUMMY_CELL_MFR_OPTIONS,
+            state="readonly",
+            width=22,
+        ).grid(row=1, column=1, sticky="ew", pady=3)
 
         parsed = self._parsed_serial
         is_new_format = parsed is not None and parsed.is_new_format
@@ -159,6 +160,13 @@ class DummyIdGUI:
         next_row += 1
 
         def _on_ok() -> None:
+            if self.cell_mfr_var.get() not in DUMMY_CELL_MFR_OPTIONS:
+                messagebox.showwarning(
+                    "Cell Manufacturer",
+                    "Select a cell manufacturer before continuing.",
+                    parent=popup,
+                )
+                return
             popup.destroy()
             self._print_dummy_label(
                 variant=variant_var.get(),
