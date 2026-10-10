@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+# from icecream import datetime
+from datetime import datetime
+
 from models.hv.gui.constants import (
     get_emark,
     get_emark_res_code,
@@ -109,7 +112,7 @@ def build_pack_qr_label(
         serial_number=serial_number,
         tac_number=value,
         tac_label=tac_label,
-        mfg_date=mfg_date,
+        mfg_date=mfg_date, 
     )
 
 
@@ -150,7 +153,8 @@ def build_battery_pack_id_label(
         variant=variant, cell_mfr=cell_mfr, pack_qr_data=pack_qr_data
     )
     qr_data = pack_qr_data or serial_number
-    mfg_year = mfg_date[-4:] if len(mfg_date) >= 4 else mfg_date
+    # mfg_year = mfg_date[-4:] if len(mfg_date) >= 4 else mfg_date # mfg_date
+    mfg_date_new = datetime.strptime(mfg_date, "%d %b %Y").strftime("%d %m %Y")
     return build_battery_pack_id_zpl_unified(
         rated_capacity=rated_capacity,
         max_voltage=max_voltage,
@@ -160,7 +164,7 @@ def build_battery_pack_id_label(
         emark_res=get_emark_res_code(variant),
         srb_code=get_srb_code(variant),
         made_in=made_in,
-        mfg_year=mfg_year,
+        mfg_date_new=mfg_date_new, # mfg_date
         qr_data=qr_data,
     )
 

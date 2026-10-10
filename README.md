@@ -34,11 +34,11 @@ for a Ten Power 24P module or `VQ150060-E1311109G260076` for BAK:
 Pack QR format: `{type_of_reess}:{serial_number}`. The REESS prefix identifies
 the cell manufacturer as well as the variant.
 
-Examples: `VX156060:A12026060806875` (Ten Power 24P) and
-`VQ150020:A12026060806875` (BAK 24P).
+Examples: `VX156060:ABA51202605281A00111` (Ten Power 24P) and
+`VQ150020:ABA51202605281A00111` (BAK 24P).
 
 - `type_of_reess` → the REESS number for the cell-manufacturer/variant pair
-- `serial_number` → e.g. `A12026060806875` (plant, line, date, 5-digit count)
+- `new_serial_number` → e.g. `ABA51202605281A00111` (plant, model, variant, line, year, month, day, category, shift, serial count)
 
 Scanning this auto-fills the cell manufacturer, variant, and serial number, and refreshes all
 battery parameters (Rated Capacity, Max Voltage, RS Version, Model Number,
@@ -73,7 +73,7 @@ TAC Number). Revision is no longer encoded in the QR data.
 1. Scan the pack serial QR (`VX...:A...`).
 2. Variant, revision, serial number, and battery parameters
    (Rated Capacity, Max Voltage, RS Version, Model Number, TAC Number,
-   SRB code, Made-in region, Mfg date) are auto-populated.
+   SRB code, Made-in region, Mfg year) are auto-populated.
 3. The full battery pack ID label is **printed automatically**.
 4. Fields reset automatically, ready for the next scan.
 
@@ -119,52 +119,6 @@ offline review).
 - If printing fails with error 1905 (`ERROR_UNKNOWN_PRINTER_DRIVER`),
   restart the Print Spooler service or reinstall the Zebra ZD421 ZPL driver.
 
-## Dataverse integration
-
-The `models/hv/dataverse/` package provides an isolated Web API client and
-environment configuration. It is not yet connected to the production screens:
-scan, serial, and print-history persistence still use the existing local
-storage. Authentication and table-specific operations must be configured
-before enabling Dataverse writes.
-
-Set `HV_DATAVERSE_URL` to the HTTPS organization origin or full Web API endpoint
-(for example, `https://<organization>.api.crm8.dynamics.com/api/data/v9.2`).
-Optionally set `HV_ENTRA_TENANT_ID` and `HV_DATAVERSE_TIMEOUT_SECONDS`.
-Authentication is not wired yet; no access tokens, client secrets, or other
-credentials belong in source files.
-
-### Backend service layer (development)
-
-`models/hv/backend/` defines application-facing service workflows and
-repository protocols independently of Tkinter, ZPL, and printer drivers.
-`create_mock_services()` supplies a thread-safe in-memory repository for local
-development without Entra registration or Dataverse access. Its data exists
-only for the lifetime of the process and is not production persistence.
-
-`create_shared_file_services()` supplies an interim shared-folder repository.
-Set `HV_SHARED_DATA_DIR` to an approved UNC path that every production PC can
-read and write. The repository serializes operations with an OS-level lock and
-replaces a JSON snapshot atomically. All clients must use the same share and
-the share must honor byte-range locks and same-directory atomic rename. It
-fails on corrupt or incompatible data rather than silently initializing over
-it. Back up the share and pilot concurrency/recovery with IT before production.
-This design is for low-volume interim use; it does not provide database-grade
-availability, transaction recovery, or large-scale reporting. Do not use a
-synced consumer folder as a substitute for a file server.
-
-The current services cover scoped/idempotent serial reservation, scan and pack
-traceability, BMB/CMB traceability, label-instance creation, and print-attempt
-history. Production
-repositories can implement the same protocols later: a Dataverse serial
-repository should delegate atomic counter allocation to a server-side
-operation. Print history should record spooler submission rather than claim
-physical output. These services are not yet wired into the existing GUI
-workflows; local JSON and Excel persistence remain active until integration is
-deliberately enabled and tested. Future Power BI service refresh from an
-on-premises share would require an approved on-premises data gateway; Dataverse
-or database-backed reporting remains the more robust long-term path.
-
----
 
 ## Project Structure
 
