@@ -11,7 +11,9 @@ a = Analysis(
         ('models/hv/assets/logo.ico', 'models/hv/assets'),
     ],
     hiddenimports=[
-        'openpyxl'
+        'openpyxl',
+        'pymongo',
+        'dns',
     ],
     excludes=[
         'matplotlib',

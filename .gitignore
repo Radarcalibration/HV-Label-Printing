@@ -3,3 +3,4 @@ dist/
 *.exe
 *.pkg
 __pycache__/
+*_atlas_export.xlsx

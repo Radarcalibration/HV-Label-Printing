@@ -16,6 +16,8 @@ import tkinter as tk
 from common.auth.machine_lock import is_authorized
 from common.auth.session import Session
 from models.hv.app import HVApp
+from models.hv.session.mongo_store import ping
+from pymongo.errors import PyMongoError
 
 
 def _base_dir() -> Path:
@@ -91,6 +93,18 @@ def main() -> None:
         messagebox.showwarning("Warning", "This Machine is not Authorized")
         sys.exit(1)
 
+    try:
+        ping()
+    except (PyMongoError, RuntimeError, ValueError) as exc:
+        root.withdraw()
+        messagebox.showerror(
+            "MongoDB Connection",
+            f"Could not connect to MongoDB Atlas:\n{exc}",
+            parent=root,
+        )
+        root.destroy()
+        return
+
     root.title("HV Label Printer — ULTRAVIOLETTE AUTOMATIVE")
     # root.geometry("1280x860")
     # root.minsize(1000, 600)
@@ -108,6 +122,26 @@ def main() -> None:
     _install_error_dialog(root)
 
     session = Session() # logged out by default — AuthBar shows its own Login button
+
+    def _close_app() -> None:
+        if session.username is not None:
+            try:
+                session.logout()
+            except (PyMongoError, RuntimeError, ValueError) as exc:
+                messagebox.showerror(
+                    "Logout Session",
+                    f"Could not record the logout in MongoDB:\n{exc}",
+                    parent=root,
+                )
+                if not messagebox.askyesno(
+                    "Close Application",
+                    "The logout was not recorded. Close anyway?",
+                    parent=root,
+                ):
+                    return
+        root.destroy()
+
+    root.protocol("WM_DELETE_WINDOW", _close_app)
     HVApp(root, session=session).pack(fill=tk.BOTH, expand=False)
     
 

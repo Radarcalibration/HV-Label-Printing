@@ -64,7 +64,8 @@ class LoginDialog(_CenteredDialog):
         if not ok:
             messagebox.showerror("Login", message, parent=self)
             return
-        self._on_success(message, password, role)
+        if self._on_success(message, password, role) is False:
+            return
         self.destroy()
 
 

@@ -8,6 +8,11 @@ from pathlib import Path
 
 from models.hv.nomenclature.serial_number import build_serial_number, parse_serial_number
 from models.hv.session.paths import get_base_dir
+from models.hv.session.mongo_store import (
+    advance_pack_serial,
+    load_pack_state as load_pack_state_from_mongo,
+    save_pack_state,
+)
 
 PACK_SESSION_FILE = get_base_dir() / "data" / "pack_session.json"
 
@@ -61,60 +66,91 @@ def save_pack_serial(serial_number: str) -> None:
     serial_number = serial_number.strip()
     if not serial_number:
         return
-    data = _load()
-    data["serial_number"] = serial_number
-
     parsed = parse_serial_number(serial_number)
+    updates = {"serial_number": serial_number}
     if parsed is not None:
-        data["serial_count"] = parsed.serial_count
+        updates["serial_count"] = parsed.serial_count
+
+    save_pack_state(updates)
+    data = _load()
+    data.update(updates)
 
     _save(data)
 
 
+def load_pack_state() -> dict[str, str]:
+    shared_state = load_pack_state_from_mongo()
+    local_state = _load()
+    state = {
+        key: (shared_state or {}).get(key, "").strip()
+        or local_state.get(key, "").strip()
+        for key in ("serial_number", "serial_count")
+    }
+    missing_shared_values = {
+        key: value
+        for key, value in state.items()
+        if value and not (shared_state or {}).get(key)
+    }
+    if missing_shared_values:
+        save_pack_state(missing_shared_values)
+    return state
+
+
 def load_pack_serial() -> str:
-    return _load().get("serial_number", "").strip()
+    return load_pack_state()["serial_number"]
 
 
 def load_pack_serial_count() -> str:
-    return _load().get("serial_count", "").strip()
+    return load_pack_state()["serial_count"]
 
 
 def save_pack_serial_count(serial_count: str) -> None:
     serial_count = serial_count.strip()
     if not serial_count:
         return
+    save_pack_state({"serial_count": serial_count})
     data = _load()
     data["serial_count"] = serial_count
     _save(data)
 
 
+def reserve_pack_serial() -> tuple[str, str]:
+    for _attempt in range(20):
+        current = load_pack_serial()
+        if not current:
+            raise RuntimeError("No pack serial is configured in MongoDB.")
+
+        parsed = parse_serial_number(current)
+        if parsed is None:
+            raise ValueError("The shared pack serial number is invalid.")
+
+        pad = 5 if parsed.is_new_format else 6
+        next_count = str(int(parsed.serial_count) + 1).zfill(pad)
+        extra = {}
+        if parsed.is_new_format:
+            extra = {
+                "model": parsed.model,
+                "variant": parsed.variant,
+                "shift": parsed.shift,
+                "category": parsed.category,
+            }
+
+        next_serial = build_serial_number(
+            plant=parsed.plant,
+            line=parsed.line,
+            when=parsed.as_date,
+            serial_count=next_count,
+            **extra,
+        )
+        if advance_pack_serial(current, next_serial, next_count):
+            data = _load()
+            data.update(serial_number=next_serial, serial_count=next_count)
+            _save(data)
+            return current, next_serial
+
+    raise RuntimeError("Could not reserve a shared pack serial after repeated conflicts.")
+
+
 def increment_pack_serial() -> str:
-    current = load_pack_serial()
-    if not current:
-        return ""
-
-    parsed = parse_serial_number(current)
-    if parsed is None:
-        return current
-
-    pad = 5 if parsed.is_new_format else 6 # serial count increased by 1 digits (previous was 5 digits) trial
-    new_count = str(int(parsed.serial_count) + 1).zfill(pad)
-
-    extra = {}
-    if parsed.is_new_format:
-        extra = {
-            "model": parsed.model,
-            "variant": parsed.variant,
-            "shift": parsed.shift,
-            "category": parsed.category,
-        }
-
-    new_serial = build_serial_number(
-        plant=parsed.plant,
-        line=parsed.line,
-        when=parsed.as_date,
-        serial_count=new_count,
-        **extra,
-    )
-    save_pack_serial(new_serial)
-    return new_serial
+    _reserved_serial, next_serial = reserve_pack_serial()
+    return next_serial

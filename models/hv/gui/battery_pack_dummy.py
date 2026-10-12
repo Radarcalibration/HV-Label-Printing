@@ -3,6 +3,7 @@ from __future__ import annotations
 import tkinter as tk
 from datetime import datetime
 from tkinter import messagebox, ttk
+from pymongo.errors import PyMongoError
 
 from models.hv.gui.battery_parameters import build_battery_parameters_panel, set_battery_parameters
 from models.hv.gui.category_controls import add_category_field, bind_category_variant
@@ -27,11 +28,10 @@ from common.auth.session import Session
 from models.hv.gui.scan_history import open_scan_history 
 from models.hv.printing.labels import build_pack_qr_label
 from models.hv.session.pack_store import (
-    increment_pack_serial,
+    load_pack_state,
     load_pack_serial,
-    load_pack_serial_count,
+    reserve_pack_serial,
     save_pack_serial,
-    save_pack_serial_count,
 )
 from models.hv.session.scan_log import ScanRecord, append_scan_record
 
@@ -100,10 +100,11 @@ class BatteryPackDummyGUI:
 
 
     def _init_serial(self) -> None:
-        stored = load_pack_serial()
+        state = load_pack_state()
+        stored = state["serial_number"]
         if stored:
             self.serial_number_var.set(stored)
-            stored_count = load_pack_serial_count()
+            stored_count = state["serial_count"]
             if stored_count:
                 self.vars["serial_count"].set(stored_count)
             else:
@@ -112,6 +113,9 @@ class BatteryPackDummyGUI:
                     self.vars["serial_count"].set(parsed.serial_count)
         else:
             self._rebuild_and_store_serial()
+            serial = self.serial_number_var.get().strip()
+            if serial:
+                save_pack_serial(serial)
 
     def _using_new_format(self) -> bool:
         fmt = self.vars.get("pack_id_format")
@@ -153,8 +157,6 @@ class BatteryPackDummyGUI:
                 serial_count=count_str,
                 **extra,
             )
-            save_pack_serial(serial)
-            save_pack_serial_count(count_str.zfill(pad))
             if hasattr(self, "serial_number_var"):
                 self.serial_number_var.set(serial)
         except (ValueError, KeyError):
@@ -524,10 +526,17 @@ class BatteryPackDummyGUI:
         serial = load_pack_serial()
         if not serial:
             self._rebuild_and_store_serial()
-            serial = load_pack_serial()
+            serial = self.serial_number_var.get().strip()
+        else:
+            parsed_serial = parse_serial_number(serial)
+            if parsed_serial is not None:
+                self._suppress_traces = True
+                self.vars["serial_count"].set(parsed_serial.serial_count)
+                self._suppress_traces = False
 
         self.vars["variant"].set(variant)
         self._on_variant_or_revision_change()
+        serial = self.serial_number_var.get().strip() or serial
         self.serial_number_var.set(serial)
 
         pack_qr = format_pack_qr_data(variant=variant, serial_number=serial, cell_mfr=cell_mfr)
@@ -596,8 +605,24 @@ class BatteryPackDummyGUI:
     def _auto_print_and_reset(self) -> None:
         variant = self.vars["variant"].get()
         cell_mfr = self.vars["cell_mfr"].get()
-        serial = self.serial_number_var.get().strip()
-        pack_qr = self.pack_qr_var.get().strip()
+        try:
+            serial, next_serial = reserve_pack_serial()
+        except (PyMongoError, RuntimeError, ValueError) as exc:
+            messagebox.showerror(
+                "Serial Reservation",
+                f"Could not reserve a shared pack serial:\n{exc}",
+                parent=self.root,
+            )
+            return
+
+        self.serial_number_var.set(serial)
+        pack_qr = format_pack_qr_data(
+            variant=variant,
+            serial_number=serial,
+            cell_mfr=cell_mfr,
+        )
+        self.pack_qr_var.set(pack_qr)
+        self.preview_var.set(f"QR Data: {pack_qr}   |   Serial: {serial}")
         params = VARIANT_PARAMS.get(variant, VARIANT_PARAMS[VARIANT_OPTIONS[-1]])
         model_number = get_type_of_reess(variant, cell_mfr)
 
@@ -641,6 +666,7 @@ class BatteryPackDummyGUI:
             log_saved = True
         except Exception as exc:
             messagebox.showerror("Log Error", f"Could not able to write scan log:\n{exc}", parent=self.root)
+            return
 
         zpl = build_pack_qr_label(
             pack_qr_data=pack_qr,
@@ -655,27 +681,19 @@ class BatteryPackDummyGUI:
         dispatch_zpl(self.root, zpl, self.print_var.get(), default_name=f"pack_{serial}.zpl", printer_name=PRINTER_DUMMY)
 
         if log_saved:
-            increment_pack_serial()
-            self.root.after(_RESET_DELAY_MS, self._auto_reset)
-        else:
-            for module_var in self._module_vars:
-                module_var.set("")
-            self.vars["cell_mfr"].set("")
-            self._on_variant_or_revision_change()
-            self._reset_integration()
-            self.preview_var.set("")
+            self.root.after(_RESET_DELAY_MS, lambda: self._auto_reset(next_serial))
 
     def _open_history(self) -> None:
         open_scan_history(self.root, print_mode=self.print_var.get(), variant=self.vars["variant"].get(), origin="dummy")
 
-    def _auto_reset(self) -> None:
+    def _auto_reset(self, next_serial: str = "") -> None:
         for module_var in self._module_vars:
             module_var.set("")
         self.vars["cell_mfr"].set("")
         self._reset_integration()
         self.preview_var.set("")
         self._true_date = datetime.now().date()
-        new_serial = load_pack_serial()
+        new_serial = next_serial or load_pack_serial()
         self.serial_number_var.set(new_serial)
         _parsed = parse_serial_number(new_serial)
         if _parsed:
@@ -709,7 +727,7 @@ class BatteryPackDummyGUI:
         if _when > _date.today():
             return  
         self._true_date = _when
-        current = load_pack_serial()
+        current = self.serial_number_var.get().strip()
         parsed = parse_serial_number(current) if current else None
         new_format = self._using_new_format()
         default_count = "1".zfill(5 if new_format else 6) # serial count increase by 1 digit (previous was 5 digits) trial
@@ -724,7 +742,6 @@ class BatteryPackDummyGUI:
                 **extra,
             )
             self._suppress_traces = True
-            save_pack_serial(new_serial)
             if hasattr(self, "serial_number_var"):
                 self.serial_number_var.set(new_serial)
             self._suppress_traces = False
@@ -788,7 +805,7 @@ class BatteryPackDummyGUI:
         finally:
             self._suppress_traces = False
 
-        current = load_pack_serial()
+        current = self.serial_number_var.get().strip()
         parsed = parse_serial_number(current) if current else None
         extra = self._new_format_kwargs() if new_format else {}
 
@@ -811,9 +828,6 @@ class BatteryPackDummyGUI:
                 )
             except (ValueError, KeyError):
                 return
-
-        save_pack_serial(new_serial)
-        save_pack_serial_count(padded)
 
         self.serial_number_var.set(new_serial)
 
@@ -878,7 +892,6 @@ class BatteryPackDummyGUI:
             return
 
         save_pack_serial(serial.strip())
-        save_pack_serial_count(parsed.serial_count)
         self._true_date = parsed.as_date
         self._suppress_traces = True
         try:

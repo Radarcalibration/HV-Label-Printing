@@ -232,8 +232,6 @@ class DummyIdGUI:
             cell_mfr=cell_mfr,
         )
 
-        dispatch_zpl(self.root, zpl, self.print_var.get(), default_name=f"dummy_{serial}.zpl", printer_name=PRINTER_DUMMY)
-
         save_pack_serial(serial)
 
         now = datetime.now()
@@ -255,7 +253,10 @@ class DummyIdGUI:
             excel_pw = self._session.excel_password if self._session else "06082003"
             append_scan_record(record, excel_password=excel_pw)
         except Exception as exc:
-            messagebox.showwarning("Log Error", f"Could not write to scan log:\n{exc}", "colse the excel sheet and try again", parent=self.root)
+            messagebox.showerror("Log Error", f"Could not write to scan log:\n{exc}", parent=self.root)
+            return
+
+        dispatch_zpl(self.root, zpl, self.print_var.get(), default_name=f"dummy_{serial}.zpl", printer_name=PRINTER_DUMMY)
 
         self.serial_entry_var.set("")
         self._parsed_serial = None

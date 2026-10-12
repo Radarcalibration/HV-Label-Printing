@@ -3,6 +3,7 @@ from __future__ import annotations
 import tkinter as tk
 from collections.abc import Callable
 from tkinter import ttk
+from pymongo.errors import PyMongoError
 
 from common.auth.session import Session
 from models.hv.gui.admin_settings_dialog import open_admin_settings
@@ -52,7 +53,16 @@ class AuthBar(ttk.Frame):
         if self._notified_this_session:
             return
         self._notified_this_session = True
-        count = len(load_unacknowledged_issues())
+        try:
+            count = len(load_unacknowledged_issues())
+        except PyMongoError as exc:
+            from tkinter import messagebox
+            messagebox.showerror(
+                "MongoDB Sync",
+                f"Could not load issue notifications:\n{exc}",
+                parent=self.winfo_toplevel(),
+            )
+            return
         if count:
             from tkinter import messagebox
             plural = "entry" if count == 1 else "entries"
@@ -73,14 +83,33 @@ class AuthBar(ttk.Frame):
                 excel_password=self.session.excel_password,
             )
 
-    def _handle_login(self, username: str, password: str, role: str) -> None:
-        self.session.login(username, password, role)
+    def _handle_login(self, username: str, password: str, role: str) -> bool:
+        try:
+            self.session.login(username, password, role)
+        except (PyMongoError, RuntimeError, ValueError) as exc:
+            from tkinter import messagebox
+            messagebox.showerror(
+                "Login Session",
+                f"Could not record the login session in MongoDB:\n{exc}",
+                parent=self.winfo_toplevel(),
+            )
+            return False
         self._notified_this_session = False
         self.refresh()
         self._on_auth_change()
+        return True
 
     def _logout(self) -> None:
-        self.session.logout()
+        try:
+            self.session.logout()
+        except (PyMongoError, RuntimeError, ValueError) as exc:
+            from tkinter import messagebox
+            messagebox.showerror(
+                "Logout Session",
+                f"Could not record the logout in MongoDB:\n{exc}",
+                parent=self.winfo_toplevel(),
+            )
+            return
         self._notified_this_session = False
         self.refresh()
         self._on_auth_change()

@@ -127,7 +127,7 @@ class AdminSettingsDialog(tk.Toplevel):
         ttk.Label(top, textvariable=status_var, foreground="#555").pack(side=tk.LEFT)
         btns = ttk.Frame(top)
         btns.pack(side=tk.RIGHT)
-        ttk.Button(btns, text="Open Excel", command=lambda: self._open_excel_safe(open_excel_fn)).pack(side=tk.LEFT, padx=(0, 6))
+        ttk.Button(btns, text="Export Excel", command=lambda: self._open_excel_safe(open_excel_fn)).pack(side=tk.LEFT, padx=(0, 6))
         ttk.Button(btns, text="Refresh", command=lambda: self._refresh_all()).pack(side=tk.LEFT)
 
         table_frame = ttk.Frame(parent)

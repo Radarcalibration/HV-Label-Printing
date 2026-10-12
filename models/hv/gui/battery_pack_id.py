@@ -17,7 +17,6 @@ from models.hv.printing.constants import PRINTER_PACK_ID
 from models.hv.printing.labels import build_battery_pack_id_label
 from datetime import datetime
 
-from models.hv.session.pack_store import save_pack_serial
 from models.hv.session.pack_id_scan_log import PackIdScanRecord
 from models.hv.session.pack_id_scan_log import append_scan_record as append_pack_id_scan_record
 
@@ -206,11 +205,6 @@ class BatteryPackIdGUI:
             return ""
         return parsed.format_date()
 
-    def _store_serial_if_present(self) -> None:
-        serial_number = self.serial_number_var.get().strip()
-        if serial_number:
-            save_pack_serial(serial_number)
-
     def _print_label(self, serial_number: str) -> None:
         category = self.category_var.get()
 
@@ -232,15 +226,6 @@ class BatteryPackIdGUI:
             pack_qr_data=pack_qr_data,
             cell_mfr=self.cell_mfr_var.get(),
         )
-        self._store_serial_if_present()
-        dispatch_zpl(
-            self.root,
-            zpl,
-            self.print_var.get(),
-            default_name=f"pack_no_{serial_number}.zpl",
-            printer_name=PRINTER_PACK_ID,
-        )
-    
         now = datetime.now()
         pw = self._session.excel_password if hasattr(self, "_session") and self._session else "06082003"
         record = PackIdScanRecord(
@@ -252,8 +237,17 @@ class BatteryPackIdGUI:
         )
         try:
             append_pack_id_scan_record(record, excel_password=pw)
-        except Exception:
-            pass
+        except Exception as exc:
+            messagebox.showerror("Log Error", f"Could not save scan history:\n{exc}", parent=self.root)
+            return
+
+        dispatch_zpl(
+            self.root,
+            zpl,
+            self.print_var.get(),
+            default_name=f"pack_no_{serial_number}.zpl",
+            printer_name=PRINTER_PACK_ID,
+        )
 
     def _reset_fields(self) -> None:
         self.scanner_var.set("")

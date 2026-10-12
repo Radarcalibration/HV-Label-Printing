@@ -241,12 +241,6 @@ class BmsIdGUI:
             cmb_serial=self._cmb_parsed.short_id,
             pack_qr_data=pack_qr,
         )
-        dispatch_zpl(
-            self.root, zpl, self.print_var.get(),
-            default_name=f"bmb_cmb_{self._bmb_parsed.short_id}.zpl",
-            printer_name=PRINTER_BMS_ID,
-        )
-
         now = datetime.now()
         record = BmsScanRecord(
             date=self._pack_date,
@@ -258,8 +252,15 @@ class BmsIdGUI:
         try:
             excel_pw = self._session.excel_password if self._session else "06082003"
             append_scan_record(record, excel_password=excel_pw)
-        except Exception:
-            pass
+        except Exception as exc:
+            messagebox.showerror("Log Error", f"Could not save scan history:\n{exc}", parent=self.root)
+            return
+
+        dispatch_zpl(
+            self.root, zpl, self.print_var.get(),
+            default_name=f"bmb_cmb_{self._bmb_parsed.short_id}.zpl",
+            printer_name=PRINTER_BMS_ID,
+        )
 
         self.root.after(_RESET_DELAY_MS, self._reset_display)
 

@@ -119,6 +119,42 @@ offline review).
 - If printing fails with error 1905 (`ERROR_UNKNOWN_PRINTER_DRIVER`),
   restart the Print Spooler service or reinstall the Zebra ZD421 ZPL driver.
 
+## MongoDB Atlas and scan history
+
+The three scan histories (`dummy_scan_logs`, `pack_id_scan_logs`, and
+`bms_scan_logs`) are stored in MongoDB Atlas as structured documents. The
+current pack serial and count are stored in the `application_state` collection.
+MongoDB is the primary store; the existing Excel workbooks continue to be
+updated locally as a parallel copy. The application requires Atlas connectivity
+for reads and writes and reports a configuration or connection error rather
+than silently treating local files as the central database.
+
+Scan History's **Export Excel** button creates/refreshes an `*_atlas_export.xlsx`
+workbook from the complete Atlas collection, leaving the existing local workbook
+and its manual edits untouched. This provides an up-to-date global export on
+request without making Excel a second conflicting source of truth.
+
+Login and logout events are recorded in `login_sessions` with the username,
+role, workstation name, and UTC timestamps; passwords are never written to the
+audit collection. Open Scan History windows check Atlas for changes every five
+seconds, so records from other workstations appear without relying on local
+Excel file changes. Battery Pack Dummy ID configuration callbacks update the
+displayed serial locally and persist only on explicit serial edits or completed
+scans, avoiding repeated synchronous network writes while fields change. A pack
+serial is atomically reserved in Atlas before its scan is logged and printed,
+so two workstations cannot print the same generated serial concurrently.
+
+Install the database dependency with `python -m pip install -r requirements.txt`.
+Set `MONGODB_URI` to the Atlas connection string on each workstation, and
+optionally set `MONGODB_DATABASE` (defaults to `hv_label_printing`). Keep the
+connection string out of source control and grant the database user only the
+permissions required for this application.
+
+To import existing Excel history, set the environment variables and run
+`python -m models.hv.session.migrate_excel_to_mongodb` once on each workstation
+that has local scan history. The migration is idempotent per workstation and
+workbook row, so it can be safely rerun if interrupted.
+
 
 ## Project Structure
 

@@ -376,4 +376,4 @@ The HV Label Printing project is a specialized desktop application for battery p
 
 The project is designed for reliability on the factory floor, with a clear path toward more formal backend integration in the future if production requirements expand to multi-site or enterprise-level traceability.
 
-# `VX156060:A12026060806875`  instead of this pattern keep 
+# i have got the mongodb atlas for backend data storage for this project, so i want all the data to be stored in backend with proper format and i can able convert that into excel format whenever required or (keep paraller update to excel too as it exists now (your choice)).

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import os
 import tkinter as tk
 from tkinter import messagebox, ttk
+from pymongo.errors import PyMongoError
 
 from models.hv.gui.constants import VARIANT_OPTIONS
 from models.hv.gui.print_actions import dispatch_zpl
@@ -14,8 +14,14 @@ from models.hv.printing.labels import build_battery_pack_id_label, build_bmb_cmb
 from models.hv.session.scan_log import load_all_records as load_dummy_records, open_log_file as open_dummy_log_file
 from models.hv.session.pack_id_scan_log import load_all_records as load_pack_id_records, open_log_file as open_pack_id_log_file
 from models.hv.session.bms_scan_log import load_all_records as load_bms_records, open_log_file as open_bms_log_file
+from models.hv.session.mongo_store import get_scan_collection_watermark
 
 _ORIGIN_LABELS = {"dummy": "Battery Pack Dummy ID", "pack_id": "Battery Pack ID", "bmb_cmb": "BMB / CMB ID"}
+_COLLECTIONS = {
+    "dummy": "dummy_scan_logs",
+    "pack_id": "pack_id_scan_logs",
+    "bmb_cmb": "bms_scan_logs",
+}
 
 
 _COL_DEFS = {
@@ -84,7 +90,7 @@ class ScanHistoryDialog(tk.Toplevel):
         self._origin = origin  
         self._col_defs = _COL_DEFS[origin]
         self._records: list = []
-        self._last_mtime: float = 0.0
+        self._last_watermark = None
         self._auto_refresh_id: str | None = None
 
         self._build_ui()
@@ -101,7 +107,7 @@ class ScanHistoryDialog(tk.Toplevel):
 
         btn_frame = ttk.Frame(top)
         btn_frame.pack(side=tk.RIGHT)
-        ttk.Button(btn_frame, text="Open Excel", command=self._open_excel, width=12).pack(side=tk.LEFT, padx=(0, 6))
+        ttk.Button(btn_frame, text="Export Excel", command=self._open_excel, width=12).pack(side=tk.LEFT, padx=(0, 6))
         ttk.Button(btn_frame, text="Refresh", command=self._load_records, width=10).pack(side=tk.LEFT, padx=(0, 6))
         ttk.Button(btn_frame, text="Reprint Selected", command=self._on_reprint, width=16).pack(side=tk.LEFT)
 
@@ -133,29 +139,21 @@ class ScanHistoryDialog(tk.Toplevel):
         self._status_var = tk.StringVar(value="")
         ttk.Label(self, textvariable=self._status_var, font=("Segoe UI", 9), padding=(10, 4)).pack(anchor=tk.W)
 
-    def _log_file_for_origin(self):
-        if self._origin == "pack_id":
-            from models.hv.session.pack_id_scan_log import LOG_FILE
-        elif self._origin == "bmb_cmb":
-            from models.hv.session.bms_scan_log import LOG_FILE
-        else:
-            from models.hv.session.scan_log import LOG_FILE
-        return LOG_FILE
-
     def _load_records(self) -> None:
-        if self._origin == "pack_id":
-            self._records = load_pack_id_records()
-        elif self._origin == "bmb_cmb":
-            self._records = load_bms_records()
-        else:
-            self._records = load_dummy_records()
-
         try:
-            log_file = self._log_file_for_origin()
-            if log_file.exists():
-                self._last_mtime = os.path.getmtime(str(log_file))
-        except Exception:
-            pass
+            watermark = get_scan_collection_watermark(_COLLECTIONS[self._origin])
+            if self._origin == "pack_id":
+                records = load_pack_id_records()
+            elif self._origin == "bmb_cmb":
+                records = load_bms_records()
+            else:
+                records = load_dummy_records()
+        except PyMongoError as exc:
+            self._status_var.set(f"MongoDB sync failed: {exc}")
+            return
+
+        self._records = records
+        self._last_watermark = watermark
 
         for item in self.tree.get_children():
             self.tree.delete(item)
@@ -174,18 +172,16 @@ class ScanHistoryDialog(tk.Toplevel):
         }.get(col_id, col_id)
 
     def _start_auto_refresh(self) -> None:
-        self._check_file_modified()
+        self._check_database_modified()
 
-    def _check_file_modified(self) -> None:
+    def _check_database_modified(self) -> None:
         try:
-            log_file = self._log_file_for_origin()
-            if log_file.exists():
-                current_mtime = os.path.getmtime(str(log_file))
-                if current_mtime > self._last_mtime and self._last_mtime > 0:
-                    self._load_records()
-        except Exception:
-            pass
-        self._auto_refresh_id = self.after(3000, self._check_file_modified)
+            watermark = get_scan_collection_watermark(_COLLECTIONS[self._origin])
+            if watermark != self._last_watermark:
+                self._load_records()
+        except PyMongoError as exc:
+            self._status_var.set(f"MongoDB sync failed: {exc}")
+        self._auto_refresh_id = self.after(5000, self._check_database_modified)
 
     def _on_close(self) -> None:
         if self._auto_refresh_id:

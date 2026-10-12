@@ -11,8 +11,10 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.protection import SheetProtection
 
 from models.hv.session.paths import get_base_dir
+from models.hv.session.mongo_store import insert_scan_record, list_scan_records
 
 LOG_FILE = get_base_dir() / "data" / "pack_id_scan_log.xlsx"
+EXPORT_FILE = get_base_dir() / "data" / "pack_id_scan_log_atlas_export.xlsx"
 SHEET_NAME = "Pack ID"
 
 PROTECT_SHEET = False
@@ -93,10 +95,12 @@ def _get_sheet(wb: openpyxl.Workbook, excel_password: str):
     return ws
 
 
-def _ensure_workbook(excel_password: str) -> openpyxl.Workbook:
-    if LOG_FILE.exists():
+def _ensure_workbook(
+    excel_password: str, *, path: Path = LOG_FILE
+) -> openpyxl.Workbook:
+    if path.exists():
         try:
-            wb = openpyxl.load_workbook(LOG_FILE)
+            wb = openpyxl.load_workbook(path)
             _get_sheet(wb, excel_password)
             return wb
         except Exception:
@@ -105,12 +109,13 @@ def _ensure_workbook(excel_password: str) -> openpyxl.Workbook:
     ws = wb.active
     ws.title = SHEET_NAME
     _build_header(ws, excel_password)
-    _ensure_writable(LOG_FILE)
-    wb.save(LOG_FILE)
+    _ensure_writable(path)
+    wb.save(path)
     return wb
 
 
 def append_scan_record(record: PackIdScanRecord, *, excel_password: str = "06082003") -> None:
+    insert_scan_record("pack_id_scan_logs", record)
     wb = _ensure_workbook(excel_password)
     ws = _get_sheet(wb, excel_password)
     ws.protection = _protection(excel_password, enabled=False)
@@ -133,30 +138,43 @@ def append_scan_record(record: PackIdScanRecord, *, excel_password: str = "06082
 
 
 def load_all_records() -> list[PackIdScanRecord]:
-    if not LOG_FILE.exists():
-        return []
-    try:
-        wb = openpyxl.load_workbook(LOG_FILE, data_only=True)
-        if SHEET_NAME not in wb.sheetnames:
-            wb.close()
-            return []
-        ws = wb[SHEET_NAME]
-        records: list[PackIdScanRecord] = []
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            if not any(row):
-                continue
-            v = [str(c) if c is not None else "" for c in row]
-            while len(v) < len(COLUMNS):
-                v.append("")
-            records.append(PackIdScanRecord(
-                date=v[1], time=v[2], serial_number=v[3], variant=v[4], pack_qr_data=v[5],
-            ))
-        wb.close()
-        return records
-    except Exception:
-        return []
+    return [
+        PackIdScanRecord(**{
+            field: str(document.get(field, "") or "")
+            for field in PackIdScanRecord.__dataclass_fields__
+        })
+        for document in list_scan_records("pack_id_scan_logs")
+    ]
+
+
+def sync_excel_from_mongodb(*, excel_password: str = "06082003") -> None:
+    records = load_all_records()
+    workbook = _ensure_workbook(excel_password, path=EXPORT_FILE)
+    worksheet = _get_sheet(workbook, excel_password)
+    worksheet.protection = _protection(excel_password, enabled=False)
+    worksheet.delete_rows(1, worksheet.max_row)
+    _build_header(worksheet, excel_password)
+    for sl_no, record in enumerate(records, start=1):
+        row_idx = sl_no + 1
+        for col_idx, (col_name, value) in enumerate(
+            zip(COLUMNS, record.as_row(sl_no)), start=1
+        ):
+            cell = worksheet.cell(row=row_idx, column=col_idx, value=value)
+            cell.font = CELL_FONT
+            h_align = "left" if col_name in LEFT_ALIGN_COLS else "center"
+            cell.alignment = Alignment(
+                horizontal=h_align, vertical="center", wrap_text=True
+            )
+            if row_idx % 2 == 0:
+                cell.fill = ALT_FILL
+        worksheet.row_dimensions[row_idx].height = 18
+    worksheet.protection = _protection(excel_password, enabled=PROTECT_SHEET)
+    _ensure_writable(EXPORT_FILE)
+    workbook.save(EXPORT_FILE)
+    workbook.close()
 
 
 def open_log_file() -> None:
-    if LOG_FILE.exists():
-        os.startfile(str(LOG_FILE))
+    sync_excel_from_mongodb()
+    if EXPORT_FILE.exists():
+        os.startfile(str(EXPORT_FILE))

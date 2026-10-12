@@ -112,7 +112,7 @@ def build_pack_qr_label(
         serial_number=serial_number,
         tac_number=value,
         tac_label=tac_label,
-        mfg_date=mfg_date, 
+        mfg_date=mfg_date,
     )
 
 

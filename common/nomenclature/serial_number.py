@@ -54,6 +54,16 @@ CATEGORY_BY_CODE_NEW = {code: name for name, code in CATEGORY_CODES_NEW.items()}
 # Shift: letter in the new format.
 SHIFT_CODES_NEW = {"A": "A", "B": "B", "C": "C"}
 
+# SHIFT_CODES_NEW = {"A": "A", "B": "B", "C": "C"} # replace shift by cell_mfr codes for new serial number (this applies only for new serial number)
+# CELL_MFR_CODES_NEW_SERIAL = {
+#     "Molical":   "P",
+#     "Samsung":   "Q",
+#     "BAK":       "R",
+#     "EVE":       "S",
+#     "LG":        "T",
+#     "Ten Power": "U",
+# }
+
 NEW_SERIAL_NUMBER_PATTERN = re.compile(
     r"^(?P<plant>[ABC])(?P<model>[ABCD])(?P<variant>A[3-6])(?P<line>[123])"
     r"(?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})"

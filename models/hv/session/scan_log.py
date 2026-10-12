@@ -11,8 +11,14 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.protection import SheetProtection
 
 from models.hv.session.paths import get_base_dir
+from models.hv.session.mongo_store import (
+    insert_scan_record,
+    list_scan_records,
+    update_scan_record_at_row,
+)
 
 LOG_FILE = get_base_dir() / "data" / "scan_log.xlsx"
+EXPORT_FILE = get_base_dir() / "data" / "scan_log_atlas_export.xlsx"
 
 SHEET_NAME = "HV Dummy"
 
@@ -189,10 +195,12 @@ def _get_scan_log_sheet(wb: openpyxl.Workbook, excel_password: str) -> openpyxl.
     return ws
 
 
-def _ensure_workbook(excel_password: str) -> openpyxl.Workbook:
-    if LOG_FILE.exists():
+def _ensure_workbook(
+    excel_password: str, *, path: Path = LOG_FILE
+) -> openpyxl.Workbook:
+    if path.exists():
         try:
-            wb = openpyxl.load_workbook(LOG_FILE)
+            wb = openpyxl.load_workbook(path)
             ws = _get_scan_log_sheet(wb, excel_password)
             existing_headers = [
                 str(ws.cell(row=1, column=i + 1).value or "").strip()
@@ -226,8 +234,8 @@ def _ensure_workbook(excel_password: str) -> openpyxl.Workbook:
                             cell.protection = openpyxl.styles.Protection(locked=False)
                     ws.row_dimensions[row_idx].height = 18
                 ws.protection = _protection(excel_password, enabled=PROTECT_SHEET)
-                _ensure_writable(LOG_FILE)
-                wb.save(LOG_FILE)
+                _ensure_writable(path)
+                wb.save(path)
             return wb
         except Exception:
             pass
@@ -236,12 +244,13 @@ def _ensure_workbook(excel_password: str) -> openpyxl.Workbook:
     ws = wb.active
     ws.title = SHEET_NAME
     _build_header(ws, excel_password)
-    _ensure_writable(LOG_FILE)
-    wb.save(LOG_FILE)
+    _ensure_writable(path)
+    wb.save(path)
     return wb
 
 
 def append_scan_record(record: ScanRecord, *, excel_password: str = "06082003") -> None:
+    insert_scan_record("dummy_scan_logs", record)
     wb = _ensure_workbook(excel_password)
     ws = _get_scan_log_sheet(wb, excel_password)
     ws.protection = _protection(excel_password, enabled=False)
@@ -267,45 +276,14 @@ def append_scan_record(record: ScanRecord, *, excel_password: str = "06082003") 
 
 
 def load_all_records_with_rows() -> list[tuple[int, ScanRecord]]:
-    
-    if not LOG_FILE.exists():
-        return []
-    try:
-        wb = openpyxl.load_workbook(LOG_FILE, data_only=True)
-        if SHEET_NAME not in wb.sheetnames:
-            wb.close()
-            return []
-        ws = wb[SHEET_NAME]
-        records: list[tuple[int, ScanRecord]] = []
-        for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
-            if not any(row):
-                continue
-            v = [str(c) if c is not None else "" for c in row]
-            while len(v) < len(COLUMNS):
-                v.append("")
-            records.append((row_idx, ScanRecord(
-                date=v[1],
-                time=v[2],
-                serial_count=v[3],
-                serial_number=v[4],
-                ref_no=v[5],
-                variant=v[6],
-                m1=v[7],
-                m2=v[8],
-                m3=v[9],
-                m4=v[10],
-                dummy_pack_status=v[11],
-                dummy_pack_qr=v[12],
-                issue_desc_1=v[13],
-                issue_desc_2=v[14],
-                action_plan=v[15],
-                remark=v[16],
-                admin_ack=v[17],
-            )))
-        wb.close()
-        return records
-    except Exception:
-        return []
+    records = []
+    for row_idx, document in enumerate(list_scan_records("dummy_scan_logs"), start=2):
+        record = ScanRecord(**{
+            field: str(document.get(field, "") or "")
+            for field in ScanRecord.__dataclass_fields__
+        })
+        records.append((row_idx, record))
+    return records
 
 
 def load_all_records() -> list[ScanRecord]:
@@ -313,27 +291,62 @@ def load_all_records() -> list[ScanRecord]:
 
 
 def load_unacknowledged_issues() -> list[tuple[int, ScanRecord]]:
-   
     return [(row, rec) for row, rec in load_all_records_with_rows() if rec.is_unacknowledged]
 
 
+def sync_excel_from_mongodb(*, excel_password: str = "06082003") -> None:
+    records = load_all_records()
+    workbook = _ensure_workbook(excel_password, path=EXPORT_FILE)
+    worksheet = _get_scan_log_sheet(workbook, excel_password)
+    worksheet.protection = _protection(excel_password, enabled=False)
+    worksheet.delete_rows(1, worksheet.max_row)
+    _build_header(worksheet, excel_password)
+    for sl_no, record in enumerate(records, start=1):
+        row_idx = sl_no + 1
+        for col_idx, (col_name, value) in enumerate(
+            zip(COLUMNS, record.as_row(sl_no)), start=1
+        ):
+            cell = worksheet.cell(row=row_idx, column=col_idx, value=value)
+            cell.font = CELL_FONT
+            h_align = "left" if col_name in LEFT_ALIGN_COLS else "center"
+            cell.alignment = Alignment(
+                horizontal=h_align, vertical="center", wrap_text=True
+            )
+            if row_idx % 2 == 0:
+                cell.fill = ALT_FILL
+            if col_name in UNLOCKED_COLS:
+                cell.protection = openpyxl.styles.Protection(locked=False)
+        worksheet.row_dimensions[row_idx].height = 18
+    worksheet.protection = _protection(excel_password, enabled=PROTECT_SHEET)
+    _ensure_writable(EXPORT_FILE)
+    workbook.save(EXPORT_FILE)
+    workbook.close()
+
+
 def patch_admin_ack(sheet_row: int, ack_text: str, *, excel_password: str = "06082003") -> bool:
-    
-    if not LOG_FILE.exists():
+    if not update_scan_record_at_row(
+        "dummy_scan_logs", sheet_row, {"admin_ack": ack_text}
+    ):
         return False
-    wb = _ensure_workbook(excel_password)
-    ws = _get_scan_log_sheet(wb, excel_password)
-    if sheet_row < 2 or sheet_row > ws.max_row:
-        wb.close()
-        return False
-    ws.protection = _protection(excel_password, enabled=False)
-    col = COLUMNS.index("Admin Acknowledgement") + 1
-    cell = ws.cell(row=sheet_row, column=col, value=ack_text)
-    cell.font = CELL_FONT
-    cell.alignment = Alignment(horizontal="left", vertical="center")
-    ws.protection = _protection(excel_password, enabled=PROTECT_SHEET)
-    _ensure_writable(LOG_FILE)
-    wb.save(LOG_FILE)
+
+    records = list_scan_records("dummy_scan_logs")
+    record_index = sheet_row - 2
+    if LOG_FILE.exists() and 0 <= record_index < len(records):
+        pack_qr = records[record_index].get("dummy_pack_qr", "")
+        wb = _ensure_workbook(excel_password)
+        ws = _get_scan_log_sheet(wb, excel_password)
+        qr_col = COLUMNS.index("Dummy Pack QR Data") + 1
+        ack_col = COLUMNS.index("Admin Acknowledgement") + 1
+        for row in range(2, ws.max_row + 1):
+            if str(ws.cell(row=row, column=qr_col).value or "").strip() == pack_qr:
+                ws.protection = _protection(excel_password, enabled=False)
+                cell = ws.cell(row=row, column=ack_col, value=ack_text)
+                cell.font = CELL_FONT
+                cell.alignment = Alignment(horizontal="left", vertical="center")
+                ws.protection = _protection(excel_password, enabled=PROTECT_SHEET)
+                _ensure_writable(LOG_FILE)
+                wb.save(LOG_FILE)
+                break
     return True
 
 
@@ -352,5 +365,6 @@ def add_sheet(sheet_name: str, *, excel_password: str = "06082003") -> tuple[boo
 
 
 def open_log_file() -> None:
-    if LOG_FILE.exists():
-        os.startfile(str(LOG_FILE))
+    sync_excel_from_mongodb()
+    if EXPORT_FILE.exists():
+        os.startfile(str(EXPORT_FILE))
