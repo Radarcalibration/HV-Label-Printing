@@ -27,7 +27,7 @@ _SUB_PATTERN = re.compile(
     r"(?P<yy>\d{2})"
     r"(?P<serial>\d{4})$"
 )
-
+# VX156600-D1611105J260302
 _FULL_PATTERN = re.compile(
     r"^(?P<part_number>V[QX]15[0-9]{4})-(?P<sub>[C-F][1-3][1-6][123ABC][123][123]\d{2}[A-L]\d{2}\d{4})$"
 )
