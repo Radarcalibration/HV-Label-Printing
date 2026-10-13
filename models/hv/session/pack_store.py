@@ -1,91 +1,148 @@
 from __future__ import annotations
 
 import json
-import os
-import tempfile
-import time
-from pathlib import Path
+import sqlite3
+from contextlib import closing, contextmanager
+from typing import Iterator
 
+from common.storage import DATABASE_FILE
 from models.hv.nomenclature.serial_number import build_serial_number, parse_serial_number
 from models.hv.session.paths import get_base_dir
 
-PACK_SESSION_FILE = get_base_dir() / "data" / "pack_session.json"
+PACK_SESSION_DB = get_base_dir() / "data" / "pack_session.db"
+LEGACY_PACK_SESSION_FILE = get_base_dir() / "data" / "pack_session.json"
+_APP_DB_MIGRATION = "app_data_pack_state_v1"
+_JSON_MIGRATION = "pack_session_json_v1"
 
-_SAVE_RETRY_ATTEMPTS = 5
-_SAVE_RETRY_DELAY_SECONDS = 0.05
+
+def _migration_completed(connection: sqlite3.Connection, name: str) -> bool:
+    return connection.execute(
+        "SELECT 1 FROM storage_migrations WHERE name = ?", (name,)
+    ).fetchone() is not None
 
 
-def _load() -> dict[str, str]:
-    if not PACK_SESSION_FILE.exists():
-        return {}
+def _mark_migration_completed(connection: sqlite3.Connection, name: str) -> None:
+    connection.execute("INSERT INTO storage_migrations(name) VALUES (?)", (name,))
+
+
+def _import_shared_database_state(connection: sqlite3.Connection) -> None:
+    if _migration_completed(connection, _APP_DB_MIGRATION):
+        return
+
+    if not DATABASE_FILE.exists():
+        _mark_migration_completed(connection, _APP_DB_MIGRATION)
+        return
+
+    with closing(sqlite3.connect(DATABASE_FILE, timeout=10)) as legacy_connection:
+        has_app_state = legacy_connection.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'app_state'"
+        ).fetchone()
+        if has_app_state:
+            rows = legacy_connection.execute(
+                "SELECT key, value FROM app_state "
+                "WHERE key IN ('serial_number', 'serial_count')"
+            ).fetchall()
+            connection.executemany(
+                "INSERT OR IGNORE INTO app_state(key, value) VALUES (?, ?)", rows
+            )
+
+    _mark_migration_completed(connection, _APP_DB_MIGRATION)
+
+
+def _import_legacy_json(connection: sqlite3.Connection) -> None:
+    if _migration_completed(connection, _JSON_MIGRATION):
+        return
+
+    if not LEGACY_PACK_SESSION_FILE.exists():
+        _mark_migration_completed(connection, _JSON_MIGRATION)
+        return
+
     try:
-        with PACK_SESSION_FILE.open(encoding="utf-8") as file:
+        with LEGACY_PACK_SESSION_FILE.open(encoding="utf-8") as file:
             data = json.load(file)
     except (json.JSONDecodeError, OSError, UnicodeDecodeError):
-       
-        return {}
-    return data if isinstance(data, dict) else {}
+        return
+
+    if isinstance(data, dict):
+        for key in ("serial_number", "serial_count"):
+            value = data.get(key)
+            if isinstance(value, str):
+                connection.execute(
+                    "INSERT OR IGNORE INTO app_state(key, value) VALUES (?, ?)",
+                    (key, value),
+                )
+
+    _mark_migration_completed(connection, _JSON_MIGRATION)
 
 
-def _save(data: dict[str, str]) -> None:
-    PACK_SESSION_FILE.parent.mkdir(parents=True, exist_ok=True)
-  
-    fd, tmp_path = tempfile.mkstemp(
-        dir=PACK_SESSION_FILE.parent, prefix=PACK_SESSION_FILE.name, suffix=".tmp"
-    )
+@contextmanager
+def _connect_db() -> Iterator[sqlite3.Connection]:
+    PACK_SESSION_DB.parent.mkdir(parents=True, exist_ok=True)
+    connection = sqlite3.connect(PACK_SESSION_DB, timeout=10)
+    connection.row_factory = sqlite3.Row
     try:
-        with os.fdopen(fd, "w", encoding="utf-8") as file:
-            json.dump(data, file, indent=2)
-
-        last_error: OSError | None = None
-        for attempt in range(_SAVE_RETRY_ATTEMPTS):
-            try:
-                os.replace(tmp_path, PACK_SESSION_FILE)
-                return
-            except OSError as exc:
-                last_error = exc
-                if attempt < _SAVE_RETRY_ATTEMPTS - 1:
-                    time.sleep(_SAVE_RETRY_DELAY_SECONDS * (attempt + 1))
-        assert last_error is not None
-        raise last_error
+        connection.execute("PRAGMA busy_timeout = 10000")
+        connection.execute(
+            "CREATE TABLE IF NOT EXISTS app_state (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
+        )
+        connection.execute(
+            "CREATE TABLE IF NOT EXISTS storage_migrations (name TEXT PRIMARY KEY)"
+        )
+        connection.execute("BEGIN IMMEDIATE")
+        _import_shared_database_state(connection)
+        _import_legacy_json(connection)
+        yield connection
+        connection.commit()
     except BaseException:
-        try:
-            os.remove(tmp_path)
-        except OSError:
-            pass
+        connection.rollback()
         raise
+    finally:
+        connection.close()
+
+
+def _load_value(key: str) -> str:
+    with _connect_db() as connection:
+        record = connection.execute(
+            "SELECT value FROM app_state WHERE key = ?", (key,)
+        ).fetchone()
+        return record["value"] if record else ""
+
+
+def _save_values(values: dict[str, str]) -> None:
+    with _connect_db() as connection:
+        connection.executemany(
+            """
+            INSERT INTO app_state(key, value) VALUES (?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value
+            """,
+            values.items(),
+        )
 
 
 def save_pack_serial(serial_number: str) -> None:
-    
     serial_number = serial_number.strip()
     if not serial_number:
         return
-    data = _load()
-    data["serial_number"] = serial_number
 
+    values = {"serial_number": serial_number}
     parsed = parse_serial_number(serial_number)
     if parsed is not None:
-        data["serial_count"] = parsed.serial_count
-
-    _save(data)
+        values["serial_count"] = parsed.serial_count
+    _save_values(values)
 
 
 def load_pack_serial() -> str:
-    return _load().get("serial_number", "").strip()
+    return _load_value("serial_number").strip()
 
 
 def load_pack_serial_count() -> str:
-    return _load().get("serial_count", "").strip()
+    return _load_value("serial_count").strip()
 
 
 def save_pack_serial_count(serial_count: str) -> None:
     serial_count = serial_count.strip()
-    if not serial_count:
-        return
-    data = _load()
-    data["serial_count"] = serial_count
-    _save(data)
+    if serial_count:
+        _save_values({"serial_count": serial_count})
 
 
 def increment_pack_serial() -> str:
@@ -97,14 +154,12 @@ def increment_pack_serial() -> str:
     if parsed is None:
         return current
 
-    pad = 5 if parsed.is_new_format else 6 # serial count increased by 1 digits (previous was 5 digits) trial
+    pad = 5 if parsed.is_new_format else 6
     new_count = str(int(parsed.serial_count) + 1).zfill(pad)
 
     extra = {}
     if parsed.is_new_format:
         if parsed.cell_mfr is None:
-            # Preserve the counter of a legacy shift-coded serial until the next
-            # integration scan rebuilds it with the scanned cell manufacturer.
             new_serial = f"{parsed.raw[:-5]}{new_count}"
             save_pack_serial(new_serial)
             return new_serial

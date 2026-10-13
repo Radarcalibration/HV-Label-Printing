@@ -82,9 +82,8 @@ This is a manual or fallback entry screen for serial / ID input when the standar
 - Zebra ZPL label language
 
 ### Local persistence
-- JSON files for pack serial state
+- SQLite databases for credentials and pack serial state
 - Excel files for scan logs and history
-- local file-based session storage for credentials and settings
 
 ### Operating model
 - designed for Windows desktop deployment
@@ -106,7 +105,9 @@ Examples:
 - `common/auth/session.py` — stores login/session state and role
 - `common/auth/user_store.py` — user role / credential definitions
 - `common/login_screen.py` — login UI support
-- `common/data/users.json` — local user definitions
+- `common/storage.py` — SQLite persistence shared by the user store and pack session
+- `common/data/app_data.db` — local user accounts
+- `models/hv/data/pack_session.db` — local pack serial state
 
 ### models/hv/
 Main production application logic and screen implementations.
@@ -188,7 +189,7 @@ The serial number handling is implemented in:
 - `models/hv/nomenclature/serial_number.py`
 - `models/hv/session/pack_store.py`
 
-The app stores the current pack serial in `models/hv/data/pack_session.json` and persists the latest serial count so that the next pack continues sequentially.
+The app stores the current pack serial and latest serial count in `models/hv/data/pack_session.db` so that the next pack continues sequentially. Existing `pack_session.json` and pack state in the previous shared `app_data.db` are imported once on first use. `users.json` is imported into `common/data/app_data.db`.
 
 ---
 
@@ -278,12 +279,10 @@ The interface is a collection of reusable Tkinter components and screens.
 
 ## 13. Local data and persistence model
 
-The application uses local files as its main persistence layer.
+The application stores user accounts in `common/data/app_data.db` and pack serial state in `models/hv/data/pack_session.db`. Older JSON files are imported once on first use and are left in place.
 
 ### Pack serial state
-Stored in:
-
-- `models/hv/data/pack_session.json`
+Stored in the `app_state` table in `models/hv/data/pack_session.db`.
 
 This keeps the last-used serial number and count so production continues without reset.
 
@@ -297,9 +296,7 @@ Stored as Excel workbooks in:
 These files preserve operational history for traceability.
 
 ### User store
-Stored in:
-
-- `common/data/users.json`
+Stored in the `users` table in `common/data/app_data.db`.
 
 The app reads these accounts to determine login access.
 

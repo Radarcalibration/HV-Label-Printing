@@ -181,16 +181,17 @@ HV_LABEL_NEW
 ├───common
 │   │   login_screen.py
 │   │   paths.py
+│   │   storage.py                       # Local SQLite database
 │   │   
 │   ├───auth
-│   │   │   machine_lock.py               # Machine Authorization
+│   │   │      machine_lock.py               # Machine Authorization
 │   │   │   session.py                    # Login session state
 │   │   │   user_store.py                 # Admin user credentials
 │   │   │   __init__.py           
 │   │           
 │   ├───data
 │   │       .gitkeep
-│   │       users.json                    # user Credientials
+│   │       app_data.db                   # User accounts
 │   │       
 │   ├───nomenclature
 │   │   │   serial_number.py              # Common Serial number nomenclature (applicable to all)
@@ -206,7 +207,7 @@ HV_LABEL_NEW
 │   │   │       .gitkeep
 │   │   │       bms_scan_log.xlsx
 │   │   │       pack_id_scan_log.xlsx
-│   │   │       pack_session.json
+│   │       pack_session.db
 │   │   │       scan_log.xlsx
 │   │   │       
 │   │   ├───gui

@@ -4,7 +4,7 @@ Recommended architecture
 
 Keep the existing Tkinter screens, scan flow, ZPL builders, and printer calls. Add a backend service layer between the existing workflows and Dataverse: GUI code continues to collect input and show results, while the service layer handles identity, serial allocation, record creation, print-event tracking, and reporting data.
 
-The project currently keeps serial state in  pack_session.json , scan history in Excel workbooks, and user accounts in  users.json . Moving those records to Dataverse would provide centralized, concurrent access and an auditable source of truth. The existing label workflow should still generate ZPL locally and send it to the same printer.
+The project currently keeps serial state and user accounts in a local SQLite database, while scan history remains in Excel workbooks. Moving those records to Dataverse would provide centralized, concurrent access and an auditable source of truth. The existing label workflow should still generate ZPL locally and send it to the same printer.
 
 Important boundary: a successful WinSpool call confirms the label was submitted to the Windows print queue; it does not confirm that a physical label came out. Record that outcome as Submitted, not Printed, unless printer-status integration is added separately.
 

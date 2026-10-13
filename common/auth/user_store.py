@@ -2,101 +2,122 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import secrets
-import tempfile
-from pathlib import Path
+import sqlite3
 
 from common.paths import get_common_base_dir
+from common.storage import connect_db
 
 USERS_FILE = get_common_base_dir() / "common" / "data" / "users.json"
 
-ROLE_ADMIN = "admin"       
-ROLE_OPERATOR = "operator"  
+ROLE_ADMIN = "admin"
+ROLE_OPERATOR = "operator"
 ROLES = (ROLE_ADMIN, ROLE_OPERATOR)
 
 MIN_PASSWORD_LENGTH = 6
+_USERS_MIGRATION = "users_json_v1"
 
 
 def _hash_password(password: str, salt: str) -> str:
     return hashlib.sha256(f"{salt}:{password}".encode("utf-8")).hexdigest()
 
 
-def _load_users() -> dict[str, dict[str, str]]:
+def _import_legacy_users(connection: sqlite3.Connection) -> None:
+    if connection.execute(
+        "SELECT 1 FROM storage_migrations WHERE name = ?", (_USERS_MIGRATION,)
+    ).fetchone():
+        return
+
     if not USERS_FILE.exists():
-        return {}
+        connection.execute(
+            "INSERT INTO storage_migrations(name) VALUES (?)", (_USERS_MIGRATION,)
+        )
+        return
+
     try:
         with USERS_FILE.open(encoding="utf-8") as file:
             data = json.load(file)
     except (json.JSONDecodeError, OSError, UnicodeDecodeError):
-        
-        return {}
-    return data if isinstance(data, dict) else {}
-
-
-def _save_users(users: dict[str, dict[str, str]]) -> None:
-    USERS_FILE.parent.mkdir(parents=True, exist_ok=True)
-   
-    fd, tmp_path = tempfile.mkstemp(
-        dir=USERS_FILE.parent, prefix=USERS_FILE.name, suffix=".tmp"
-    )
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as file:
-            json.dump(users, file, indent=2)
-        os.replace(tmp_path, USERS_FILE)
-    except BaseException:
-        try:
-            os.remove(tmp_path)
-        except OSError:
-            pass
-        raise
-
-
-def _seed_default_admin_if_empty() -> None:
-    users = _load_users()
-    if users:
         return
-    salt = secrets.token_hex(16)
-    users["Anil"] = {
-        "salt": salt,
-        "password_hash": _hash_password("06082003", salt),
-        "role": ROLE_ADMIN,
-    }
-    _save_users(users)
+
+    if isinstance(data, dict):
+        for username, record in data.items():
+            if not isinstance(username, str) or not isinstance(record, dict):
+                continue
+            salt = record.get("salt")
+            password_hash = record.get("password_hash")
+            role = record.get("role", ROLE_OPERATOR)
+            if not all(isinstance(value, str) for value in (salt, password_hash, role)):
+                continue
+            connection.execute(
+                """
+                INSERT OR IGNORE INTO users(username, salt, password_hash, role)
+                VALUES (?, ?, ?, ?)
+                """,
+                (username, salt, password_hash, role),
+            )
+
+    connection.execute(
+        "INSERT INTO storage_migrations(name) VALUES (?)", (_USERS_MIGRATION,)
+    )
+
+
+def _seed_default_admin_if_empty(connection: sqlite3.Connection) -> None:
+    connection.execute("BEGIN IMMEDIATE")
+    _import_legacy_users(connection)
+    if not connection.execute("SELECT 1 FROM users LIMIT 1").fetchone():
+        salt = secrets.token_hex(16)
+        connection.execute(
+            """
+            INSERT INTO users(username, salt, password_hash, role)
+            VALUES (?, ?, ?, ?)
+            """,
+            ("Anil", salt, _hash_password("06082003", salt), ROLE_ADMIN),
+        )
 
 
 def authenticate_user(username: str, password: str) -> tuple[bool, str, str]:
-    _seed_default_admin_if_empty()
     username = username.strip()
     password = password.strip()
 
-    if not username or not password:
-        return False, "Username and password are required.", ""
+    with connect_db() as connection:
+        _seed_default_admin_if_empty(connection)
+        if not username or not password:
+            return False, "Username and password are required.", ""
 
-    users = _load_users()
-    record = users.get(username)
-    if record is None:
-        return False, "Invalid username or password.", ""
+        record = connection.execute(
+            "SELECT salt, password_hash, role FROM users WHERE username = ?",
+            (username,),
+        ).fetchone()
+        if record is None:
+            return False, "Invalid username or password.", ""
 
-    expected = record["password_hash"]
-    actual = _hash_password(password, record["salt"])
-    if actual != expected:
-        return False, "Invalid username or password.", ""
+        actual = _hash_password(password, record["salt"])
+        if actual != record["password_hash"]:
+            return False, "Invalid username or password.", ""
 
-    role = record.get("role", ROLE_OPERATOR)
-    return True, username, role
+        return True, username, record["role"]
 
 
 def list_users() -> list[tuple[str, str]]:
-    _seed_default_admin_if_empty()
-    users = _load_users()
-    return sorted((name, rec.get("role", ROLE_OPERATOR)) for name, rec in users.items())
+    with connect_db() as connection:
+        _seed_default_admin_if_empty(connection)
+        records = connection.execute(
+            "SELECT username, role FROM users ORDER BY username"
+        ).fetchall()
+        return [
+            (record["username"], record["role"]) for record in records
+        ]
 
 
 def get_user_role(username: str) -> str | None:
-    users = _load_users()
-    record = users.get(username)
-    return record.get("role", ROLE_OPERATOR) if record else None
+    with connect_db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        _import_legacy_users(connection)
+        record = connection.execute(
+            "SELECT role FROM users WHERE username = ?", (username,)
+        ).fetchone()
+        return record["role"] if record else None
 
 
 def add_user(username: str, password: str, role: str = ROLE_OPERATOR) -> tuple[bool, str]:
@@ -110,36 +131,53 @@ def add_user(username: str, password: str, role: str = ROLE_OPERATOR) -> tuple[b
     if role not in ROLES:
         return False, "Invalid role."
 
-    users = _load_users()
-    if username.lower() in {name.lower() for name in users}:
-        return False, "Username already exists."
-
     salt = secrets.token_hex(16)
-    users[username] = {
-        "salt": salt,
-        "password_hash": _hash_password(password, salt),
-        "role": role,
-    }
-    _save_users(users)
+    with connect_db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        _import_legacy_users(connection)
+        if username.lower() in {
+            row["username"].lower()
+            for row in connection.execute("SELECT username FROM users")
+        }:
+            return False, "Username already exists."
+        try:
+            connection.execute(
+                """
+                INSERT INTO users(username, salt, password_hash, role)
+                VALUES (?, ?, ?, ?)
+                """,
+                (username, salt, _hash_password(password, salt), role),
+            )
+        except sqlite3.IntegrityError:
+            return False, "Username already exists."
+
     role_label = "Admin" if role == ROLE_ADMIN else "Operator"
     return True, f'{role_label} "{username}" added.'
 
 
 def delete_user(username: str, *, current_user: str) -> tuple[bool, str]:
     username = username.strip()
-    users = _load_users()
-    if username not in users:
-        return False, "User not found."
-    if username == current_user:
-        return False, "You cannot delete the account you're currently logged in as."
+    with connect_db() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        _import_legacy_users(connection)
+        record = connection.execute(
+            "SELECT role FROM users WHERE username = ?", (username,)
+        ).fetchone()
+        if record is None:
+            return False, "User not found."
+        if username == current_user:
+            return False, "You cannot delete the account you're currently logged in as."
 
-    admin_count = sum(1 for rec in users.values() if rec.get("role", ROLE_OPERATOR) == ROLE_ADMIN)
-    if users[username].get("role", ROLE_OPERATOR) == ROLE_ADMIN and admin_count <= 1:
-        return False, "At least one Admin account must remain."
-    if len(users) <= 1:
-        return False, "At least one account must remain."
+        admin_count = connection.execute(
+            "SELECT COUNT(*) FROM users WHERE role = ?", (ROLE_ADMIN,)
+        ).fetchone()[0]
+        user_count = connection.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+        if record["role"] == ROLE_ADMIN and admin_count <= 1:
+            return False, "At least one Admin account must remain."
+        if user_count <= 1:
+            return False, "At least one account must remain."
 
-    role_label = "Admin" if users[username].get("role", ROLE_OPERATOR) == ROLE_ADMIN else "Operator"
-    del users[username]
-    _save_users(users)
+        connection.execute("DELETE FROM users WHERE username = ?", (username,))
+
+    role_label = "Admin" if record["role"] == ROLE_ADMIN else "Operator"
     return True, f'{role_label} "{username}" removed.'

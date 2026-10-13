@@ -65,9 +65,10 @@ Purpose:
 - Local credential and role management for app users.
 
 Main logic:
-- Uses `users.json` as the backing storage file.
+- Uses `common/data/app_data.db` for local SQLite storage.
+- Imports existing users from `users.json` once on first use.
 - `_hash_password(password, salt)` creates a salted SHA-256 hash.
-- `_seed_default_admin_if_empty()` creates a default admin account if no user file exists.
+- `_seed_default_admin_if_empty()` creates a default admin account if no users remain after migration.
 - `authenticate_user(username, password)` validates username/password and returns `(success, message, role)`.
 - `add_user(...)` creates a new user with a hashed password and role.
 - `delete_user(...)` removes users while protecting the last admin account.
@@ -588,17 +589,18 @@ Why it matters:
 ## File: `models/hv/session/pack_store.py`
 
 Purpose:
-- Save and load pack serial state using JSON.
+- Save and load pack serial state using SQLite.
 
 Main logic:
-- `_load()` and `_save()` maintain a persisted `pack_session.json`.
+- Stores pack serial state in `models/hv/data/pack_session.db`.
+- Imports existing state from `pack_session.json` and the previous shared `app_data.db` once on first use.
 - `save_pack_serial(...)` stores the latest serial.
 - `load_pack_serial()` reads the last serial used.
 - `increment_pack_serial()` increases the serial count and writes the next serial.
 - This turns serial generation into a persistent, stateful production counter.
 
 Why it matters:
-- The project keeps the current production count and next serial in local JSON storage.
+- The project keeps the current production count and next serial in a dedicated local SQLite database.
 
 ---
 
