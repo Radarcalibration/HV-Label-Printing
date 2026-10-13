@@ -23,7 +23,8 @@ def apply_module_fields(vars_map: dict[str, tk.StringVar], parsed: ParsedModuleI
     vars_map["variant"].set(parsed.variant)
     vars_map["plant"].set(parsed.plant)
     vars_map["line"].set(parsed.line)
-    vars_map["shift"].set(parsed.shift)
+    # if "shift" in vars_map:
+    #     vars_map["shift"].set(parsed.shift)
     if "cell_mfr" in vars_map:
         vars_map["cell_mfr"].set(parsed.cell_mfr)
     if "group" in vars_map:

@@ -112,11 +112,12 @@ Purpose:
 - Defines the serial-number generation and parsing logic for the project’s active new format only.
 
 Main logic:
-- `NEW_PLANT_CODES`, `MODEL_CODES`, `CATEGORY_CODES_NEW`, and `SHIFT_CODES_NEW` define the production code maps used by the new format.
-- `ParsedSerialNumber` stores plant, line, date, serial count, and the model/variant/category/shift metadata specific to the new scheme.
-- `build_serial_number(...)` generates serials in the project’s current format using plant, model, variant, category, shift, and six-digit count.
+- `NEW_PLANT_CODES`, `MODEL_CODES`, `CATEGORY_CODES_NEW`, and `CELL_MFR_CODES_NEW` define the production code maps used by the new format.
+- New serials encode the cell manufacturer as P=Molical, Q=Samsung, R=BAK, S=EVE, T=LG, and U=Ten Power; legacy shift-coded serials remain parseable.
+- `ParsedSerialNumber` stores plant, line, date, serial count, and the model/variant/category/cell-manufacturer metadata specific to the new scheme.
+- `build_serial_number(...)` generates serials in the project’s current format using plant, model, variant, category, cell manufacturer, and serial count.
 - `parse_serial_number(value)` validates and parses only the active new format for the current workflow.
-- Validation ensures plant, line, date, category, shift, and serial count are consistent.
+- Validation ensures plant, line, date, category, cell manufacturer, and serial count are consistent.
 
 Why it matters:
 - This is the backbone of all pack serial generation and validation under the current production rules.
@@ -439,7 +440,7 @@ Purpose:
 - Actual serial-number generation/parsing engine for the project’s current production format.
 
 Main logic:
-- Contains code maps for plants, models, categories, shifts, and the active new-format rules.
+- Contains code maps for plants, models, categories, cell manufacturers, and the active new-format rules.
 - `build_serial_number(...)` builds serials using the project’s active new scheme.
 - `parse_serial_number(...)` validates and parses the active format used by the app.
 - Date checks and code conversion logic are embedded here.

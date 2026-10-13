@@ -6,7 +6,7 @@ from tkinter import messagebox, ttk
 
 from models.hv.gui.constants import VARIANT_OPTIONS
 from models.hv.gui.print_actions import dispatch_zpl
-from models.hv.printing.constants import PRINTER_DUMMY
+from models.hv.printing.constants import PRINTER_PACK_ID, PRINTER_DUMMY
 from models.hv.printing.labels import build_battery_pack_id_label, build_bmb_cmb_combined_label, build_pack_qr_label
 
 # Three separate logs, one per screen — see session/scan_log.py,
@@ -217,6 +217,13 @@ class ScanHistoryDialog(tk.Toplevel):
         from models.hv.nomenclature.scan_handler import identify_scan
         variant = rec.variant.strip() if rec.variant.strip() in VARIANT_OPTIONS else self._variant
         scan = identify_scan(rec.dummy_pack_qr)
+        if scan.serial is None or (scan.serial.is_new_format and scan.serial.cell_mfr is None):
+            messagebox.showwarning(
+                "Reprint",
+                "Unrecognized Code, Check With the Nomenclature of Pack ID or Dummy ID.",
+                parent=self,
+            )
+            return
         cell_mfr = scan.cell_mfr or ""
         params = VARIANT_PARAMS.get(variant, VARIANT_PARAMS[VARIANT_OPTIONS[-1]])
         model_number = get_type_of_reess(variant, cell_mfr)
@@ -269,7 +276,7 @@ class ScanHistoryDialog(tk.Toplevel):
             pack_qr_data=rec.pack_qr_data,
             cell_mfr=cell_mfr,
         )
-        dispatch_zpl(self, zpl, self._print_mode, default_name=f"reprint_pack_id_{idx+1}.zpl", printer_name=PRINTER_DUMMY)
+        dispatch_zpl(self, zpl, self._print_mode, default_name=f"reprint_pack_id_{idx+1}.zpl", printer_name=PRINTER_PACK_ID)
         self._status_var.set(f"Reprinted (Battery Pack ID) row {idx + 1}")
 
     def _reprint_bmb_cmb(self, idx: int, rec) -> None:

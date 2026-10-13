@@ -23,7 +23,7 @@ The application is used to manage the labeling process for battery pack producti
 - BMS / CMB / BMB label printing
 - scan history recording
 - serial number tracking and pack generation
-- admin-controlled configuration for plant, line, variant, and shift
+- admin-controlled configuration for plant, line, and variant
 
 This is not a generic barcode app. It is a specialized manufacturing label system for ULTRAVIOLETTE high-voltage packs and associated battery management units.
 
@@ -38,7 +38,7 @@ This screen is used to scan all four module IDs (M1 to M4) for a pack.
 
 Workflow:
 
-1. Select plant, line, variant, pack shift, serial count, and date
+1. Select plant, line, variant, serial count, and date
 2. Scan four module QR codes
 3. Validate that each scanned module matches the expected variant and pack configuration
 4. If valid, generate the pack QR and print the pack label
@@ -179,7 +179,9 @@ This pattern combines:
 - REESS / type information
 - serial number
 - date
-- shift / variant / category metadata
+- cell manufacturer / variant / category metadata
+
+The new serial format uses the cell-manufacturer character after category: Molical=P, Samsung=Q, BAK=R, EVE=S, LG=T, and Ten Power=U. Existing shift-coded serials remain supported for parsing.
 
 The serial number handling is implemented in:
 
@@ -376,4 +378,4 @@ The HV Label Printing project is a specialized desktop application for battery p
 
 The project is designed for reliability on the factory floor, with a clear path toward more formal backend integration in the future if production requirements expand to multi-site or enterprise-level traceability.
 
-# `VX156060:A12026060806875`  instead of this pattern keep 
+# `VX156060:A12026060806875`  instead of this pattern keep

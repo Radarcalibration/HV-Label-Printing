@@ -1,6 +1,6 @@
 from __future__ import annotations
 """Pack serial QR format:  VX156060:A120260608006675
-VX156060:ABA51202605281A00111  #VX156060:ABA51202605281A123456
+VX156060:ABA51202605281U00111  #VX156060:ABA51202605281U123456
 """
 
 import re
@@ -56,7 +56,7 @@ def identify_scan(value: str) -> ScanResult:
         reess_part = pack_qr_match.group("reess").upper()
         serial_raw = pack_qr_match.group("serial")
         serial = parse_serial_number(serial_raw)
-        if serial is not None:
+        if serial is not None and not (serial.is_new_format and serial.cell_mfr is None):
             variant = VARIANT_BY_REESS.get(reess_part)
             if variant and serial.variant and variant != serial.variant:
                 return ScanResult(raw=cleaned.upper(), scan_type=ScanType.UNKNOWN)
@@ -74,7 +74,7 @@ def identify_scan(value: str) -> ScanResult:
         return ScanResult(raw=module.raw, scan_type=ScanType.MODULE_ID, module=module)
 
     serial = parse_serial_number(cleaned)
-    if serial is not None:
+    if serial is not None and not (serial.is_new_format and serial.cell_mfr is None):
         return ScanResult(raw=serial.raw, scan_type=ScanType.SERIAL_NUMBER, serial=serial)
 
     bmb_cmb = parse_bmb_cmb_id(cleaned)

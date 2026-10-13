@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from common.nomenclature.serial_number import (
+    CELL_MFR_BY_CODE_NEW,
+    CELL_MFR_CODES_NEW,
     CATEGORY_BY_CODE_NEW,
     CATEGORY_CODES_NEW,
     MODEL_BY_CODE,
@@ -21,6 +23,8 @@ from common.nomenclature.serial_number import (
 )
 
 __all__ = [
+    "CELL_MFR_BY_CODE_NEW",
+    "CELL_MFR_CODES_NEW",
     "CATEGORY_BY_CODE_NEW",
     "CATEGORY_CODES_NEW",
     "MODEL_BY_CODE",

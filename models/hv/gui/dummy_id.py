@@ -101,7 +101,7 @@ class DummyIdGUI:
         result = identify_scan(raw)
         if result.scan_type != ScanType.SERIAL_NUMBER or result.serial is None:
             messagebox.showwarning(
-                "Invalid Serial Number",
+                "Invalid Pack ID", "Invalid Pack ID, Check with the Encoded variables.",
                 parent=self.root,
             )
             self.serial_entry_var.set("")

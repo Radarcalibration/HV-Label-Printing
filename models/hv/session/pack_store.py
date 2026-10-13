@@ -102,10 +102,16 @@ def increment_pack_serial() -> str:
 
     extra = {}
     if parsed.is_new_format:
+        if parsed.cell_mfr is None:
+            # Preserve the counter of a legacy shift-coded serial until the next
+            # integration scan rebuilds it with the scanned cell manufacturer.
+            new_serial = f"{parsed.raw[:-5]}{new_count}"
+            save_pack_serial(new_serial)
+            return new_serial
         extra = {
             "model": parsed.model,
             "variant": parsed.variant,
-            "shift": parsed.shift,
+            "cell_mfr": parsed.cell_mfr,
             "category": parsed.category,
         }
 

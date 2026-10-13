@@ -51,13 +51,31 @@ CATEGORY_CODES_NEW = {
 }
 CATEGORY_BY_CODE_NEW = {code: name for name, code in CATEGORY_CODES_NEW.items()}
 
-# Shift: letter in the new format.
+# Cell manufacturer: letter in the new format.
+CELL_MFR_CODES_NEW = {
+    "molical": "P",
+    "samsung": "Q",
+    "bak": "R",
+    "eve": "S",
+    "lg": "T",
+    "ten power": "U",
+}
+CELL_MFR_BY_CODE_NEW = {
+    "P": "Molical",
+    "Q": "Samsung",
+    "R": "BAK",
+    "S": "EVE",
+    "T": "LG",
+    "U": "Ten Power",
+}
+
+# Legacy shift codes are accepted only when parsing serials generated before the manufacturer-code change.
 SHIFT_CODES_NEW = {"A": "A", "B": "B", "C": "C"}
 
 NEW_SERIAL_NUMBER_PATTERN = re.compile(
     r"^(?P<plant>[ABC])(?P<model>[ABCD])(?P<variant>A[3-6])(?P<line>[123])"
     r"(?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})"
-    r"(?P<category>[12])(?P<shift>[ABC])(?P<serial_count>\d{5})$" # serial count trial
+    r"(?P<category>[12])(?P<cell_mfr>[P-U])(?P<serial_count>\d{5})$"
 )
 
 
@@ -73,6 +91,8 @@ class ParsedSerialNumber:
     # New-format-only fields - empty/None when parsed from the old format.
     model: str | None = None
     variant: str | None = None
+    cell_mfr: str | None = None
+    # Set only for legacy new-format serials that used a shift code.
     shift: str | None = None
     category: str | None = None
 
@@ -100,6 +120,7 @@ def build_serial_number(
     serial_count: str,
     model: str | None = None,
     variant: str | None = None,
+    cell_mfr: str | None = None,
     shift: str | None = None,
     category: str | None = None,
 ) -> str:
@@ -108,7 +129,7 @@ def build_serial_number(
     if isinstance(when, datetime):
         when = when.date()
 
-    new_format_requested = any(v is not None for v in (model, variant, shift, category))
+    new_format_requested = any(v is not None for v in (model, variant, cell_mfr, shift, category))
 
     if not new_format_requested:
         if plant_key not in PLANT_CODES:
@@ -134,9 +155,13 @@ def build_serial_number(
     if variant_key not in MODULE_VARIANT_CODES_NEW:
         raise ValueError(f"Unsupported variant: {variant}")
 
-    shift_key = (shift or "").strip().upper()
-    if shift_key not in SHIFT_CODES_NEW:
-        raise ValueError(f"Unsupported shift: {shift}")
+    # shift_key = (shift or "").strip().upper()
+    # if shift_key not in SHIFT_CODES_NEW:
+    #     raise ValueError(f"Unsupported shift: {shift}")
+
+    cell_mfr_key = (cell_mfr or "").strip().lower()
+    if cell_mfr_key not in CELL_MFR_CODES_NEW:
+        raise ValueError(f"Unsupported cell manufacturer: {cell_mfr}")
 
     category_key = (category or "").strip().lower()
     if category_key not in CATEGORY_CODES_NEW:
@@ -151,7 +176,7 @@ def build_serial_number(
         f"{line}"
         f"{when:%Y%m%d}"
         f"{CATEGORY_CODES_NEW[category_key]}"
-        f"{SHIFT_CODES_NEW[shift_key]}"
+        f"{CELL_MFR_CODES_NEW[cell_mfr_key]}"
         f"{count}"
     )
 
@@ -164,8 +189,9 @@ def build_serial_number_for_model(
     when: datetime | date,
     serial_count: str,
     variant: str,
-    shift: str,
+    cell_mfr: str, #| None = None,
     category: str,
+    shift: str | None = None,
 ) -> str:
     
     return build_serial_number(
@@ -175,6 +201,7 @@ def build_serial_number_for_model(
         serial_count=serial_count,
         model=model,
         variant=variant,
+        cell_mfr=cell_mfr,
         shift=shift,
         category=category,
     )
@@ -190,12 +217,15 @@ def _parse_new_format(cleaned: str) -> ParsedSerialNumber | None:
     model_code = g["model"]
     variant_code = g["variant"]
     category_code = g["category"]
+    manufacturer_code = g["cell_mfr"]
 
     if plant_code not in NEW_PLANT_BY_CODE:
         return None
     if model_code not in MODEL_BY_CODE:
         return None
     if variant_code not in VARIANT_BY_CODE_NEW:
+        return None
+    if manufacturer_code not in CELL_MFR_BY_CODE_NEW and manufacturer_code not in SHIFT_CODES_NEW:
         return None
 
     try:
@@ -213,7 +243,8 @@ def _parse_new_format(cleaned: str) -> ParsedSerialNumber | None:
         raw=cleaned,
         model=MODEL_BY_CODE[model_code],
         variant=VARIANT_BY_CODE_NEW[variant_code],
-        shift=g["shift"],
+        cell_mfr=CELL_MFR_BY_CODE_NEW.get(manufacturer_code),
+        shift=manufacturer_code if manufacturer_code in SHIFT_CODES_NEW else None,
         category=CATEGORY_BY_CODE_NEW[category_code],
     )
 

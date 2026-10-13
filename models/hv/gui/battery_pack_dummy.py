@@ -88,7 +88,7 @@ class BatteryPackDummyGUI:
         self._true_date = datetime.now().date() #always call today date, no ecncoded date fallback should happen 
 
         self._build_ui()
-        self.vars["pack_shift"].set(self._get_current_shift())
+        # self.vars["pack_shift"].set(self._get_current_shift())
         self._refresh_datetime()
         self._on_variant_or_revision_change()
         self._init_serial()
@@ -117,24 +117,24 @@ class BatteryPackDummyGUI:
         fmt = self.vars.get("pack_id_format")
         return fmt is None or fmt.get() == "New"
     
-    def _get_current_shift(self) -> str:
-        now = datetime.now().time()
-
-        if now.hour > 6 or (now.hour == 6 and now.minute >= 30):
-            if now.hour < 15:
-                return "A"
-
-        if 15 <= now.hour < 23:
-            return "B"
-
-        return "C"
+    # def _get_current_shift(self) -> str:
+    #     now = datetime.now().time()
+    #
+    #     if now.hour > 6 or (now.hour == 6 and now.minute >= 30):
+    #         if now.hour < 15:
+    #             return "A"
+    #
+    #     if 15 <= now.hour < 23:
+    #         return "B"
+    #
+    #     return "C"
 
     def _new_format_kwargs(self) -> dict:
         
         return {
             "model": "high voltage",
             "variant": self.vars["variant"].get(),
-            "shift": self.vars.get("pack_shift", tk.StringVar(value="A")).get(),
+            "cell_mfr": self.vars["cell_mfr"].get(),
             "category": self.vars["category"].get(),
         }
 
@@ -191,7 +191,8 @@ class BatteryPackDummyGUI:
             ("Variant",  "variant",  VARIANT_OPTIONS),
             #("Pack ID Format", "pack_id_format", ["New", "Old"]), #use this if you need old format
             ("Pack ID Format", "pack_id_format", ["New"]), #only new format
-            ("Pack Shift", "pack_shift", ["A", "B", "C"]),
+            ("Cell Manufacturer", "cell_mfr", CELL_MFR_OPTIONS),
+            # ("Pack Shift", "pack_shift", ["A", "B", "C"]),
         ]
 
 
@@ -203,8 +204,7 @@ class BatteryPackDummyGUI:
 
 
         hidden_fields = [
-            ("cell_mfr",     CELL_MFR_OPTIONS),
-            ("shift",        ["A", "B", "C"]),
+            # ("shift",        ["A", "B", "C"]),
             ("machine",      ["1", "2"]),
         ]
         hidden_string_fields = [
@@ -247,7 +247,7 @@ class BatteryPackDummyGUI:
             self._widgets["variant"],
             self._on_variant_or_revision_change,
         )
-        for key in ("variant", "category", "plant", "line", "pack_id_format", "pack_shift"):
+        for key in ("variant", "category", "plant", "line", "pack_id_format", "cell_mfr"):
             self.vars[key].trace_add("write", self._on_variant_or_revision_change)
 
 
@@ -793,24 +793,38 @@ class BatteryPackDummyGUI:
         extra = self._new_format_kwargs() if new_format else {}
 
         if parsed is not None and parsed.is_new_format == new_format:
+            if new_format:
+                extra = {
+                    "model": parsed.model or "high voltage",
+                    "variant": parsed.variant or self.vars["variant"].get(),
+                    "cell_mfr": parsed.cell_mfr or self.vars["cell_mfr"].get(),
+                    "category": parsed.category or self.vars["category"].get(),
+                }
+                if not extra["cell_mfr"]:
+                    messagebox.showerror(
+                        "Cell manufacturer required",
+                        "Scan a module QR code before updating the serial count.",
+                        parent=self.root,
+                    )
+                    return
+            else:
+                extra = {}
+            plant, line, when = parsed.plant, parsed.line, parsed.as_date
+        else:
+            extra = self._new_format_kwargs() if new_format else {}
+            plant, line, when = self.vars["plant"].get(), self.vars["line"].get(), datetime.now().date()
+
+        try:
             new_serial = build_serial_number(
-                plant=parsed.plant,
-                line=parsed.line,
-                when=parsed.as_date,
+                plant=plant,
+                line=line,
+                when=when,
                 serial_count=padded,
                 **extra,
             )
-        else:
-            try:
-                new_serial = build_serial_number(
-                    plant=self.vars["plant"].get(),
-                    line=self.vars["line"].get(),
-                    when=datetime.now().date(),
-                    serial_count=padded,
-                    **extra,
-                )
-            except (ValueError, KeyError):
-                return
+        except (ValueError, KeyError) as exc:
+            messagebox.showerror("Invalid serial settings", str(exc), parent=self.root)
+            return
 
         save_pack_serial(new_serial)
         save_pack_serial_count(padded)
@@ -888,8 +902,10 @@ class BatteryPackDummyGUI:
             if "pack_id_format" in self.vars:
                 self.vars["pack_id_format"].set("New" if parsed.is_new_format else "Old")
             if parsed.is_new_format:
-                if "pack_shift" in self.vars and parsed.shift:
-                    self.vars["pack_shift"].set(parsed.shift)
+                # if "pack_shift" in self.vars and parsed.shift:
+                #     self.vars["pack_shift"].set(parsed.shift)
+                if parsed.cell_mfr:
+                    self.vars["cell_mfr"].set(parsed.cell_mfr)
                 if parsed.variant:
                     self.vars["variant"].set(parsed.variant)
                 if parsed.category:
@@ -931,17 +947,15 @@ class BatteryPackDummyGUI:
 
             rebuild_required = True
 
-        # Shift rollover
-        current_shift = self._get_current_shift()
-
-        if self.vars["pack_shift"].get() != current_shift:
-            self._suppress_traces = True
-            try:
-                self.vars["pack_shift"].set(current_shift)
-            finally:
-                self._suppress_traces = False
-
-            rebuild_required = True
+        # Shift rollover (disabled; serial numbers now use cell manufacturer codes).
+        # current_shift = self._get_current_shift()
+        # if self.vars["pack_shift"].get() != current_shift:
+        #     self._suppress_traces = True
+        #     try:
+        #         self.vars["pack_shift"].set(current_shift)
+        #     finally:
+        #         self._suppress_traces = False
+        #     rebuild_required = True
 
         # Rebuild serial only when needed
         if rebuild_required:
@@ -963,11 +977,11 @@ class BatteryPackDummyGUI:
                     # set_entry_enabled(widget, True)
                 continue #Comment it to date editable to only admins
             
-            if key == "pack_shift":
-                if isinstance(widget,ttk.Combobox):
-                    widget.configure(state="readonly")
-                    set_combobox_enabled(widget, False)
-                continue   # comment it to make pack shift editable to admin
+            # if key == "pack_shift":
+            #     if isinstance(widget,ttk.Combobox):
+            #         widget.configure(state="readonly")
+            #         set_combobox_enabled(widget, False)
+            #     continue
             
             if isinstance(widget, ttk.Combobox):
                 set_combobox_enabled(widget, self.is_admin)
