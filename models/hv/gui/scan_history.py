@@ -101,7 +101,13 @@ class ScanHistoryDialog(tk.Toplevel):
 
         btn_frame = ttk.Frame(top)
         btn_frame.pack(side=tk.RIGHT)
-        ttk.Button(btn_frame, text="Open Excel", command=self._open_excel, width=12).pack(side=tk.LEFT, padx=(0, 6))
+        excel_button_text = "Open Original Excel" if self._origin == "dummy" else "Open Excel"
+        ttk.Button(
+            btn_frame,
+            text=excel_button_text,
+            command=self._open_excel,
+            width=18 if self._origin == "dummy" else 12,
+        ).pack(side=tk.LEFT, padx=(0, 6))
         ttk.Button(btn_frame, text="Refresh", command=self._load_records, width=10).pack(side=tk.LEFT, padx=(0, 6))
         ttk.Button(btn_frame, text="Reprint Selected", command=self._on_reprint, width=16).pack(side=tk.LEFT)
 
@@ -133,13 +139,14 @@ class ScanHistoryDialog(tk.Toplevel):
         self._status_var = tk.StringVar(value="")
         ttk.Label(self, textvariable=self._status_var, font=("Segoe UI", 9), padding=(10, 4)).pack(anchor=tk.W)
 
-    def _log_file_for_origin(self):
+    def _storage_file_for_origin(self):
         if self._origin == "pack_id":
             from models.hv.session.pack_id_scan_log import LOG_FILE
         elif self._origin == "bmb_cmb":
             from models.hv.session.bms_scan_log import LOG_FILE
         else:
-            from models.hv.session.scan_log import LOG_FILE
+            from models.hv.session.scan_log import DB_FILE
+            return DB_FILE
         return LOG_FILE
 
     def _load_records(self) -> None:
@@ -151,7 +158,7 @@ class ScanHistoryDialog(tk.Toplevel):
             self._records = load_dummy_records()
 
         try:
-            log_file = self._log_file_for_origin()
+            log_file = self._storage_file_for_origin()
             if log_file.exists():
                 self._last_mtime = os.path.getmtime(str(log_file))
         except Exception:
@@ -178,7 +185,7 @@ class ScanHistoryDialog(tk.Toplevel):
 
     def _check_file_modified(self) -> None:
         try:
-            log_file = self._log_file_for_origin()
+            log_file = self._storage_file_for_origin()
             if log_file.exists():
                 current_mtime = os.path.getmtime(str(log_file))
                 if current_mtime > self._last_mtime and self._last_mtime > 0:

@@ -287,13 +287,12 @@ Stored in the `app_state` table in `models/hv/data/pack_session.db`.
 This keeps the last-used serial number and count so production continues without reset.
 
 ### Scan logs
-Stored as Excel workbooks in:
+Dummy pack scan records are stored in `models/hv/data/scan_log.db`; the app imports existing records from `scan_log.xlsx` once and leaves that workbook unchanged. Other scan logs remain in Excel workbooks:
 
-- `models/hv/data/scan_log.xlsx`
 - `models/hv/data/pack_id_scan_log.xlsx`
 - `models/hv/data/bms_scan_log.xlsx`
 
-These files preserve operational history for traceability.
+The original `models/hv/data/scan_log.xlsx` is retained as-is as the pre-migration copy.
 
 ### User store
 Stored in the `users` table in `common/data/app_data.db`.

@@ -156,6 +156,7 @@ HV_LABEL_NEW
 │   │   │       bms_scan_log.xlsx
 │   │   │       pack_id_scan_log.xlsx
 │   │       pack_session.db
+│   │       scan_log.db                   # Dummy pack scan history
 │   │   │       scan_log.xlsx
 │   │   │       
 │   │   ├───gui

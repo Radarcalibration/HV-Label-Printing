@@ -5,3 +5,4 @@ dist/
 __pycache__/
 /common/data/app_data.db
 /models/hv/data/pack_session.db
+/models/hv/data/scan_log.db

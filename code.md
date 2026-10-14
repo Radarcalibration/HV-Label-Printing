@@ -462,18 +462,13 @@ Class:
 Functions:
 - `has_issue()`: checks whether the record has an issue description.
 - `is_unacknowledged()`: checks whether an admin has not yet acknowledged the issue.
-- `as_row()`: returns the Excel row structure for the log.
-- `_ensure_writable()`: ensures the workbook can be updated.
-- `_protection()`: returns the workbook protection password.
-- `_build_header()`: creates the header row for the log table.
-- `_get_scan_log_sheet()`: gets or creates the scan log sheet.
-- `_ensure_workbook()`: creates the workbook if required.
-- `append_scan_record()`: writes a new dummy pack record into Excel.
-- `load_all_records_with_rows()`: reads records together with their raw row data.
-- `load_all_records()`: reads the saved dummy-pack log records.
+- `as_row()`: returns the legacy Excel column order.
+- `_migrate_xlsx()`: imports existing workbook rows into `scan_log.db` once without modifying the workbook.
+- `append_scan_record()`: writes a new dummy pack record into SQLite.
+- `load_all_records_with_rows()`: reads records with their database IDs.
+- `load_all_records()`: reads the saved dummy-pack log records from SQLite.
 - `load_unacknowledged_issues()`: returns only records that still need admin acknowledgement.
-- `patch_admin_ack()`: updates the acknowledgment or admin note fields in a record.
-- `add_sheet()`: adds an extra sheet if the workbook structure requires it.
-- `open_log_file()`: opens the dummy log workbook in Excel.
+- `patch_admin_ack()`: updates the acknowledgment field in SQLite.
+- `open_log_file()`: opens the preserved original workbook in Excel.
 
 End
