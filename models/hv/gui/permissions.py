@@ -8,7 +8,7 @@ def set_combobox_enabled(combo: ttk.Combobox, enabled: bool) -> None:
 
 
 def set_entry_enabled(entry: ttk.Entry, enabled: bool) -> None:
-    entry.configure(state="normal" if enabled else "disabled")
+    entry.configure(state="normal" if enabled else "readonly")
 
 
 def set_button_enabled(button: ttk.Button, enabled: bool) -> None:

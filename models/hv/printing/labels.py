@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-# from icecream import datetime
 from datetime import datetime
 
 from models.hv.gui.constants import (
@@ -18,9 +17,9 @@ from models.hv.printing.zpl import (
     build_battery_pack_id_zpl_unified,
     build_bmb_cmb_combined_zpl,
     build_bmb_cmb_zpl,
-    build_bms_id_zpl,
-    build_hv_module_label_domestic,
-    build_hv_module_label_export,
+    # build_bms_id_zpl,
+    # build_hv_module_label_domestic,
+    # build_hv_module_label_export,
     build_hv_pack_label_domestic,
     build_hv_pack_label_export,
     build_pack_qr_zpl,
@@ -33,33 +32,33 @@ def _reess_for_pack_qr(*, variant: str, cell_mfr: str, pack_qr_data: str) -> str
         cell_mfr = get_cell_mfr_from_reess(qr_reess) or ""
     reess = get_type_of_reess(variant, cell_mfr)
     if reess == "NA" or (qr_reess and reess != qr_reess):
-        raise ValueError(f"Pack QR REESS does not match variant/cell manufacturer: {pack_qr_data}")
+        raise ValueError(f"part number of pack id does not match variant/cell manufacturer: {pack_qr_data}")
     return reess
 
 
-def build_hv_module_label(
-    *,
-    full_module_id: str,
-    variant: str,
-    model_number: str,
-    mfg_date: str,
-    mfg_year: str,
-    category: str,
-) -> str:
-    is_export = category.strip().lower() == "export"
-    module = parse_module_id(full_module_id)
-    if module is None:
-        raise ValueError("Invalid module ID")
-    if is_export:
-        return build_hv_module_label_export(full_module_id=full_module_id)
-    return build_hv_module_label_domestic(full_module_id=full_module_id)
+# def build_hv_module_label(
+#     *,
+#     full_module_id: str,
+#     # variant: str,
+#     # model_number: str,
+#     # mfg_date: str,
+#     # mfg_year: str,
+#     category: str,
+# ) -> str:
+#     is_export = category.strip().lower() == "export"
+#     module = parse_module_id(full_module_id)
+#     if module is None:
+#         raise ValueError("Invalid module ID")
+#     if is_export:
+#         return build_hv_module_label_export(full_module_id=full_module_id)
+#     return build_hv_module_label_domestic(full_module_id=full_module_id)
 
 
 def build_hv_pack_label(
     *,
     module_id: str,
     variant: str,
-    model_number: str,
+    # model_number: str,
     mfg_date: str,
     mfg_year: str,
     category: str,
@@ -124,15 +123,15 @@ def build_bmb_cmb_label(*, kind: str, value: str, pack_qr_data: str = "") -> str
     return build_bmb_cmb_zpl(kind=kind, value=value, pack_qr_data=pack_qr_data)
 
 
-def build_bms_id_label(*, bms_id: str, pack_qr_data: str = "") -> str:
-    return build_bms_id_zpl(bms_id=bms_id, pack_qr_data=pack_qr_data)
+# def build_bms_id_label(*, bms_id: str, pack_qr_data: str = "") -> str:
+#     return build_bms_id_zpl(bms_id=bms_id, pack_qr_data=pack_qr_data)
 
 
-def _emark_res(variant: str) -> str:
-    full = get_emark(variant)
-    if not full or "*" not in full:
-        return full
-    return full.split("*", 1)[1]
+# def _emark_res(variant: str) -> str:
+#     full = get_emark(variant)
+#     if not full or "*" not in full:
+#         return full
+#     return full.split("*", 1)[1]
 
 
 def build_battery_pack_id_label(
@@ -169,16 +168,16 @@ def build_battery_pack_id_label(
     )
 
 
-def build_scanned_module_label(*, full_module_id: str, variant: str, category: str) -> str:
-    module = parse_module_id(full_module_id)
-    return build_hv_module_label(
-        full_module_id=full_module_id,
-        variant=variant,
-        model_number=get_model_number_for_label(variant, module.cell_mfr if module else ""),
-        mfg_date="",
-        mfg_year="",
-        category=category,
-    )
+# def build_scanned_module_label(*, full_module_id: str, variant: str, category: str) -> str:
+#     module = parse_module_id(full_module_id)
+#     return build_hv_module_label(
+#         full_module_id=full_module_id,
+#         variant=variant,
+#         model_number=get_model_number_for_label(variant, module.cell_mfr if module else ""),
+#         mfg_date="",
+#         mfg_year="",
+#         category=category,
+#     )
 
 
 def get_model_number_for_label(variant: str, cell_mfr: str) -> str:

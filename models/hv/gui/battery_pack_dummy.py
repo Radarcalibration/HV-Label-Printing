@@ -122,7 +122,7 @@ class BatteryPackDummyGUI:
             count = self.vars.get("serial_count")
             new_format = self._using_new_format()
             pad = 5 if new_format else 6 #serial count increased to 6 digit (trial)
-            count_str = count.get() if count is not None else "1".zfill(pad)
+            count_str = count.get() if count is not None else "000001".zfill(pad)
             count_str = (count_str or "1").zfill(pad)
             extra = self._new_format_kwargs() if new_format else {}
             serial = build_serial_number(

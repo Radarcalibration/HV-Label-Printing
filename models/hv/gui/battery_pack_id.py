@@ -88,8 +88,8 @@ class BatteryPackIdGUI:
         manufacturer_frame = ttk.Frame(row)
         manufacturer_frame.grid(row=0, column=2, sticky="nsew", padx=(0, 10))
         ttk.Label(manufacturer_frame, text="Cell Manufacturer", font=LABEL_FONT).pack(anchor=tk.W)
-        manufacturer_value = ttk.Label(
-            manufacturer_frame, textvariable=self.cell_mfr_var, font=FIELD_FONT, anchor=tk.W
+        manufacturer_value = ttk.Entry(
+            manufacturer_frame, textvariable=self.cell_mfr_var, font=FIELD_FONT,
         )
         manufacturer_value.pack(fill=tk.X, pady=(5, 0), ipady=FIELD_IPADY)
 

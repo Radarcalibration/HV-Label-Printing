@@ -32,7 +32,6 @@ Functions:
 - `build_serial_number()`: creates a serial number from component values.
 - `build_serial_number_for_model()`: builds a serial number for a specific model and letter code.
 - `_parse_new_format()`: extracts all fields from new-format serials.
-- `_parse_old_format()`: extracts all fields from legacy serials.
 - `parse_serial_number()`: entry point that reads a raw serial string and returns a ParsedSerialNumber object.
 
 # common/auth/__init__.py

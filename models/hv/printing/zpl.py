@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 _LEFT_MARGIN  = 60
-# _LEFT_MARGIN  = 210 # new label trial 195
 
 
 def _header(pw: int, ll: int) -> str:
@@ -10,7 +9,6 @@ def _header(pw: int, ll: int) -> str:
         f"^CI28\n"
         f"^PW{pw}\n"
         f"^LL{ll}\n"
-        # f"^LH{_LEFT_MARGIN},18\n"
         f"^LH{_LEFT_MARGIN},18\n"
     )
 
@@ -23,36 +21,36 @@ def _fd(text: str) -> str:
     return str(text).replace("^", "").replace("~", "")
 
 
-def _type_code_from_model(model_number: str) -> str:
-    base = model_number.split("-")[0].strip()
-    return f"UV_{base}"
+# def _type_code_from_model(model_number: str) -> str:
+#     base = model_number.split("-")[0].strip()
+#     return f"UV_{base}"
 
 
-def build_hv_module_label_domestic(
-    *,
-    full_module_id: str,   
-) -> str:
-    b = _header(120, 120)
+# def build_hv_module_label_domestic(
+#     *,
+#     full_module_id: str,   
+# ) -> str:
+#     b = _header(120, 120)
 
-    b += f"^FO10,10^BQN,2,3^FDQA,{_fd(full_module_id)}^FS\n"
+#     b += f"^FO10,10^BQN,2,3^FDQA,{_fd(full_module_id)}^FS\n"
 
-    y = 100
-    b += f"^FO0,{y}^A0N,8,8^FD{_fd(full_module_id)}^FS\n"
+#     y = 100
+#     b += f"^FO0,{y}^A0N,8,8^FD{_fd(full_module_id)}^FS\n"
 
-    b += _footer()
-    return b
+#     b += _footer()
+#     return b
 
 
-def build_hv_module_label_export(
-    *,
-    full_module_id: str,
-) -> str:
-    b = _header(120, 120)
-    b += f"^FO10,10^BQN,2,3^FDQA,{_fd(full_module_id)}^FS\n"
-    y = 100
-    b += f"^FO0,{y}^A0N,8,8^FD{_fd(full_module_id)}^FS\n"
-    b += _footer()
-    return b
+# def build_hv_module_label_export(
+#     *,
+#     full_module_id: str,
+# ) -> str:
+#     b = _header(120, 120)
+#     b += f"^FO10,10^BQN,2,3^FDQA,{_fd(full_module_id)}^FS\n"
+#     y = 100
+#     b += f"^FO0,{y}^A0N,8,8^FD{_fd(full_module_id)}^FS\n"
+#     b += _footer()
+#     return b
 
 
 def build_hv_pack_label_domestic(
@@ -110,20 +108,20 @@ def build_bmb_cmb_zpl(*, kind: str, value: str, pack_qr_data: str = "") -> str:
     return b
 
 
-def build_bms_id_zpl(*, bms_id: str, pack_qr_data: str = "") -> str:
-    b = _header(600, 300)
-    b += f"^FO00,120^BQN,2,8^FDQA,{_fd(bms_id)}^FS\n"
-    b += f"^FO160,35^A0N,37,39^FDBMS DATA^FS\n"
-    b += f"^FO160,70^GB170,3,3^FS\n"
-    if pack_qr_data:
-        b += f"^FO00,90^A0N,27,28^FDPack ID: {_fd(pack_qr_data[:31])}^FS\n"
-        y_bms = 150
-    else:
-        y_bms = 140
-    b += f"^FO185,{y_bms}^A0N,30,32^FDBMS ID: {_fd(bms_id)}^FS\n"
-    b += f"^FO185,{y_bms + 70}^A0N,30,32^FDS/W Version: ^FS\n"
-    b += _footer(2)
-    return b
+# def build_bms_id_zpl(*, bms_id: str, pack_qr_data: str = "") -> str:
+#     b = _header(600, 300)
+#     b += f"^FO00,120^BQN,2,8^FDQA,{_fd(bms_id)}^FS\n"
+#     b += f"^FO160,35^A0N,37,39^FDBMS DATA^FS\n"
+#     b += f"^FO160,70^GB170,3,3^FS\n"
+#     if pack_qr_data:
+#         b += f"^FO00,90^A0N,27,28^FDPack ID: {_fd(pack_qr_data[:31])}^FS\n"
+#         y_bms = 150
+#     else:
+#         y_bms = 140
+#     b += f"^FO185,{y_bms}^A0N,30,32^FDBMS ID: {_fd(bms_id)}^FS\n"
+#     b += f"^FO185,{y_bms + 70}^A0N,30,32^FDS/W Version: ^FS\n"
+#     b += _footer(2)
+#     return b
 
 
 def build_pack_qr_zpl(

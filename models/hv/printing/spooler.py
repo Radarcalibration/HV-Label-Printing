@@ -1,17 +1,10 @@
 from __future__ import annotations
 
 import ctypes
-# import os
-# import subprocess
-# import time
 from ctypes import wintypes
 from pathlib import Path
 
 from models.hv.printing.constants import  PRINTER_PACK_ID #, PRINTER_NAME
-
-
-# _PRINTER_CACHE: dict[str, tuple[str, float]] = {} #{str1, (str2, float1)}
-# _PRINTER_CACHE_TTL_SECONDS = 120.0
 
 
 class DOCINFO1(ctypes.Structure):
@@ -20,19 +13,6 @@ class DOCINFO1(ctypes.Structure):
         ("pOutputFile", wintypes.LPWSTR),
         ("pDatatype",   wintypes.LPWSTR),
     ]
-
-
-# def _list_installed_printers() -> list[str]:
-#     if os.name != "nt":
-#         return []
-#     result = subprocess.run(
-#         ["powershell", "-NoProfile", "-Command",
-#          "Get-Printer | Select-Object -ExpandProperty Name"],
-#         capture_output=True, text=True, check=False,
-#     )
-#     if result.returncode != 0:
-#         return []
-#     return [line.strip() for line in result.stdout.splitlines() if line.strip()]
 
 
 def _resolve_printer_name(printer_name: str) -> str:
