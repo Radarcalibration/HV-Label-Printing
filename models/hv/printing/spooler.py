@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 import ctypes
-import os
-import subprocess
-import time
+# import os
+# import subprocess
+# import time
 from ctypes import wintypes
 from pathlib import Path
 
-from models.hv.printing.constants import PRINTER_NAME
+from models.hv.printing.constants import  PRINTER_PACK_ID #, PRINTER_NAME
 
 
-_PRINTER_CACHE: dict[str, tuple[str, float]] = {}
-_PRINTER_CACHE_TTL_SECONDS = 120.0
+# _PRINTER_CACHE: dict[str, tuple[str, float]] = {} #{str1, (str2, float1)}
+# _PRINTER_CACHE_TTL_SECONDS = 120.0
 
 
 class DOCINFO1(ctypes.Structure):
@@ -22,50 +22,23 @@ class DOCINFO1(ctypes.Structure):
     ]
 
 
-def _list_installed_printers() -> list[str]:
-    if os.name != "nt":
-        return []
-    result = subprocess.run(
-        ["powershell", "-NoProfile", "-Command",
-         "Get-Printer | Select-Object -ExpandProperty Name"],
-        capture_output=True, text=True, check=False,
-    )
-    if result.returncode != 0:
-        return []
-    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+# def _list_installed_printers() -> list[str]:
+#     if os.name != "nt":
+#         return []
+#     result = subprocess.run(
+#         ["powershell", "-NoProfile", "-Command",
+#          "Get-Printer | Select-Object -ExpandProperty Name"],
+#         capture_output=True, text=True, check=False,
+#     )
+#     if result.returncode != 0:
+#         return []
+#     return [line.strip() for line in result.stdout.splitlines() if line.strip()]
 
 
 def _resolve_printer_name(printer_name: str) -> str:
-    cached = _PRINTER_CACHE.get(printer_name)
-    if cached is not None:
-        resolved, cached_at = cached
-        if time.monotonic() - cached_at < _PRINTER_CACHE_TTL_SECONDS:
-            return resolved
+    return printer_name
 
-    if os.name != "nt":
-        raise OSError("Raw ZPL printing is only supported on Windows.")
-    names = _list_installed_printers()
-
-    if printer_name in names:
-        resolved = printer_name
-    else:
-        resolved = next(
-            (name for name in names if printer_name.lower() in name.lower()),
-            None,
-        )
-        if resolved is None:
-            if not names:
-                resolved = printer_name  # nothing to compare against — try it as-is
-            else:
-                raise OSError(
-                    f'Printer "{printer_name}" not found. Available printers: {", ".join(names)}'
-                )
-
-    _PRINTER_CACHE[printer_name] = (resolved, time.monotonic())
-    return resolved
-
-
-def send_zpl(zpl: str, printer_name: str = PRINTER_NAME) -> None:
+def send_zpl(zpl: str, printer_name: str = PRINTER_PACK_ID) -> None:
     resolved_name = _resolve_printer_name(printer_name)
     payload = zpl.encode("utf-8")
 
@@ -88,7 +61,7 @@ def send_zpl(zpl: str, printer_name: str = PRINTER_NAME) -> None:
 
     hprinter = wintypes.HANDLE()
     if not winspool.OpenPrinterW(resolved_name, ctypes.byref(hprinter), None):
-        raise OSError(f'Could not open printer "{resolved_name}" (OpenPrinterW failed, error {ctypes.GetLastError()}).')
+        raise OSError(f'Could not open printer "{resolved_name}" (check with printer name is correct or not, error {ctypes.GetLastError()}).')
 
     try:
         job_id = 0
@@ -128,4 +101,4 @@ def send_zpl(zpl: str, printer_name: str = PRINTER_NAME) -> None:
 def save_zpl(zpl: str, path: str | Path) -> Path:
     output = Path(path)
     output.write_text(zpl, encoding="utf-8")
-    return output  #6363676070
+    return output

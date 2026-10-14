@@ -59,7 +59,7 @@ class HVApp(ttk.Frame):
             base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
             return base / relative   
                  
-        super().__init__(parent)
+        super().__init__(parent) #run parent init 1st then child init.
         self.session = session
 
         top_bar = ttk.Frame(self, padding=(12, 8))
@@ -79,40 +79,20 @@ class HVApp(ttk.Frame):
                     
                 logo_label = ttk.Label(top_bar, image=logo_image)
                 logo_label.image = logo_image  
-                logo_label.pack(side=tk.LEFT, anchor=tk.W, padx=(0, 8))
+                logo_label.pack(side=tk.LEFT, anchor=tk.W, padx=(0, 2))
                 
         except tk.TclError:
             pass
         
         ttk.Label(top_bar, text="HV Label Printer — ULTRAVIOLETTE AUTOMATIVE",
-                  font=("Segoe UI", 13, "bold")).pack(side=tk.LEFT)
+                  font=("Segeo UI", 13, "bold")).pack(side=tk.LEFT)
         self.auth_bar = AuthBar(top_bar, self.session, self._on_auth_change)
         self.auth_bar.pack(side=tk.RIGHT)
         
         ttk.Button(top_bar, text="LV Label Printer", command=open_lv_printer, state="disabled").pack(side="right", padx=10)
-        
         ttk.Button(top_bar, text="Shockwave Label Printer", command=open_shockwave_printer, state="disabled").pack(side="right", padx=10)
-        
         ttk.Button(top_bar, text="Tesseract Label Printer", command=open_tesseract_printer, state="disabled").pack(side="right", padx=10)
         
-        # printer_var = tk.StringVar()
-
-        # actions = {
-        #     "LV Label Printer": open_lv_printer,
-        #     "Shockwave Label Printer": open_shockwave_printer,
-        #     "Tesseract Label Printer": open_tesseract_printer,
-        # }
-
-        # combo = ttk.Combobox(
-        # top_bar,
-        # textvariable=printer_var,
-        # values=list(actions),
-        # state="readonly",
-        # width=22
-        # )
-        # combo.pack(side="right", padx=10)
-
-        # combo.bind("<<ComboboxSelected>>", lambda e: actions)
 
         ttk.Separator(self, orient=tk.HORIZONTAL).pack(fill=tk.X)
 
@@ -125,7 +105,7 @@ class HVApp(ttk.Frame):
         selector_group = ttk.Frame(selector_bar)
         selector_group.grid(row=0, column=1)
         ttk.Label(
-            selector_group, text="Id Type", font=("Segoe UI", 12, "bold")
+            selector_group, text="ID TYPE :", font=("Segoe UI", 13, "bold")
         ).pack(side=tk.LEFT, padx=(0, 12))
         self._screen_var = tk.StringVar(value=next(iter(SCREENS)))
         screen_combo = ttk.Combobox(
@@ -133,7 +113,7 @@ class HVApp(ttk.Frame):
             textvariable=self._screen_var,
             values=list(SCREENS.keys()),
             state="readonly",
-            width=32,
+            width=25,
             font=("Segoe UI", 14),
             justify="center",
         )

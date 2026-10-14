@@ -36,18 +36,11 @@ from models.hv.session.pack_store import (
 from models.hv.session.scan_log import ScanRecord, append_scan_record
 
 COMPACT_IPADY = 2
-_RESET_DELAY_MS = 100
-
-
-# def _format_date(dt: datetime) -> str:
-#     return format_date_display(dt.date())
-
-# def _format_time(dt: datetime) -> str:
-#     return dt.strftime("%I:%M:%S %p").lstrip("0")
+_RESET_DELAY_MS = 200
 
 
 def _format_time(dt: datetime) -> str:
-    return dt.strftime("%I/%M/%S %p").lstrip("0")
+    return dt.strftime("%I/%M/%S %p").lstrip("0") #.lstrip ("0") removes leading 0s
 
 
 class BatteryPackDummyGUI:
@@ -77,18 +70,14 @@ class BatteryPackDummyGUI:
         self._integration_ok = False
         self._suppress_traces = False
         self._vars_ready = False
-        self.integration_status_var = tk.StringVar(value="")
-        self.pack_qr_var = tk.StringVar(value="")
+        self.integration_status_var = tk.StringVar(value="--Waiting for Module Integration--")
+        self.pack_qr_var = tk.StringVar(value="--Waiting for Module Integration--")
         self.print_var = tk.StringVar(value="print")
 
 
-        # stored = load_pack_serial()
-        # stored_parsed = parse_serial_number(stored) if stored else None
-        #self._true_date = stored_parsed.as_date if stored_parsed else datetime.now().date()
         self._true_date = datetime.now().date() #always call today date, no ecncoded date fallback should happen 
 
         self._build_ui()
-        # self.vars["pack_shift"].set(self._get_current_shift())
         self._refresh_datetime()
         self._on_variant_or_revision_change()
         self._init_serial()
@@ -113,21 +102,11 @@ class BatteryPackDummyGUI:
         else:
             self._rebuild_and_store_serial()
 
+
     def _using_new_format(self) -> bool:
         fmt = self.vars.get("pack_id_format")
         return fmt is None or fmt.get() == "New"
     
-    # def _get_current_shift(self) -> str:
-    #     now = datetime.now().time()
-    #
-    #     if now.hour > 6 or (now.hour == 6 and now.minute >= 30):
-    #         if now.hour < 15:
-    #             return "A"
-    #
-    #     if 15 <= now.hour < 23:
-    #         return "B"
-    #
-    #     return "C"
 
     def _new_format_kwargs(self) -> dict:
         
@@ -189,10 +168,8 @@ class BatteryPackDummyGUI:
             ("Plant",    "plant",    ["Jigani", "Domlur"]),
             ("Line",     "line",     ["1", "2", "3"]),
             ("Variant",  "variant",  VARIANT_OPTIONS),
-            #("Pack ID Format", "pack_id_format", ["New", "Old"]), #use this if you need old format
             ("Pack ID Format", "pack_id_format", ["New"]), #only new format
             ("Cell Manufacturer", "cell_mfr", CELL_MFR_OPTIONS),
-            # ("Pack Shift", "pack_shift", ["A", "B", "C"]),
         ]
 
 
@@ -204,7 +181,6 @@ class BatteryPackDummyGUI:
 
 
         hidden_fields = [
-            # ("shift",        ["A", "B", "C"]),
             ("machine",      ["1", "2"]),
         ]
         hidden_string_fields = [
@@ -324,14 +300,15 @@ class BatteryPackDummyGUI:
             integration_col,
             textvariable=self.integration_status_var,
             font=("Segoe UI", 11, "bold"),
-            foreground="#1a7f37",
+            foreground="#511595",
         ).grid(row=1, column=1, sticky=tk.W, padx=(6, 0))
 
         ttk.Label(integration_col, text="Pack QR:", font=LABEL_FONT).grid(row=2, column=0, sticky=tk.W, pady=(6, 0))
         ttk.Label(
             integration_col,
             textvariable=self.pack_qr_var,
-            font=DISPLAY_FONT,
+            font=("Segoe UI", 11, "bold"),
+            foreground="#23824E",
             anchor=tk.W,
         ).grid(row=2, column=1, sticky="ew", padx=(6, 0), pady=(6, 0))
 
@@ -484,8 +461,8 @@ class BatteryPackDummyGUI:
 
     def _reset_integration(self) -> None:
         self._integration_ok = False
-        self.integration_status_var.set("")
-        self.pack_qr_var.set("")
+        self.integration_status_var.set("--Waiting for Module Integration--")
+        self.pack_qr_var.set("--Waiting for Module Integration--")
 
     def _try_complete_integration(self) -> None:
         if not self._all_modules_scanned():
@@ -888,7 +865,7 @@ class BatteryPackDummyGUI:
         from datetime import date as _date
         is_export = self.vars["category"].get().strip().lower() == "export"
         if not is_export and parsed.as_date > _date.today():
-            messagebox.showwarning("Invalid Date", "upcoming dates are not allowed.", parent=self.root)
+            messagebox.showwarning("Invalid Date", "Future dates are not allowed.", parent=self.root)
             return
 
         save_pack_serial(serial.strip())
@@ -902,8 +879,6 @@ class BatteryPackDummyGUI:
             if "pack_id_format" in self.vars:
                 self.vars["pack_id_format"].set("New" if parsed.is_new_format else "Old")
             if parsed.is_new_format:
-                # if "pack_shift" in self.vars and parsed.shift:
-                #     self.vars["pack_shift"].set(parsed.shift)
                 if parsed.cell_mfr:
                     self.vars["cell_mfr"].set(parsed.cell_mfr)
                 if parsed.variant:
@@ -912,27 +887,19 @@ class BatteryPackDummyGUI:
                     self.vars["category"].set(parsed.category.capitalize())
             if "date" in self.vars:
                 if is_export:
-                    self.vars["date"].set(str(parsed.year))
+                    self.vars["date"].set(parsed.as_date.strftime("%z %b %Y")) # oct 2026
+                    # self.vars["date"].set(str(parsed.year)) # 2026
                 else:
                     self.vars["date"].set(parsed.as_date.strftime("%d %b %Y"))
         finally:
             self._suppress_traces = False
         self.serial_number_var.set(serial.strip())
 
-    # def _refresh_datetime(self) -> None:
-    #     now = datetime.now()
-    #     self.vars["time"].set(_format_time(now))
-    #     self.root.after(1000, self._refresh_datetime)
     
     def _refresh_datetime(self) -> None:
         now = datetime.now()
-
-        # Update time display
         self.vars["time"].set(_format_time(now))
-
         rebuild_required = False
-
-        # Date rollover
         current_date = now.date()
 
         if current_date != self._true_date:
@@ -947,15 +914,6 @@ class BatteryPackDummyGUI:
 
             rebuild_required = True
 
-        # Shift rollover (disabled; serial numbers now use cell manufacturer codes).
-        # current_shift = self._get_current_shift()
-        # if self.vars["pack_shift"].get() != current_shift:
-        #     self._suppress_traces = True
-        #     try:
-        #         self.vars["pack_shift"].set(current_shift)
-        #     finally:
-        #         self._suppress_traces = False
-        #     rebuild_required = True
 
         # Rebuild serial only when needed
         if rebuild_required:
@@ -975,13 +933,7 @@ class BatteryPackDummyGUI:
                 if isinstance(widget, ttk.Entry):
                     widget.configure(state="readonly") 
                     # set_entry_enabled(widget, True)
-                continue #Comment it to date editable to only admins
-            
-            # if key == "pack_shift":
-            #     if isinstance(widget,ttk.Combobox):
-            #         widget.configure(state="readonly")
-            #         set_combobox_enabled(widget, False)
-            #     continue
+                continue #editable to none
             
             if isinstance(widget, ttk.Combobox):
                 set_combobox_enabled(widget, self.is_admin)

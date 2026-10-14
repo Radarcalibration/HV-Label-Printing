@@ -7,31 +7,31 @@ from ctypes import wintypes
 from pathlib import Path
 
 
-from models.hv.printing.spooler import DOCINFO1, PRINTER_NAME, _resolve_printer_name
+from models.hv.printing.spooler import DOCINFO1, PRINTER_PACK_ID, _resolve_printer_name
 
 FONT_FILES = [
     (r"C:\Users\RadarCalibration\Downloads\Fonts\Fonts\BrutalType-Black.ttf", "BRUTALTYPE-BLACK.TTF"),
     (r"C:\Users\RadarCalibration\Downloads\Fonts\Fonts\BrutalType-Medium.ttf", "BRUTALTYPE-MEDIUM.TTF"),
 ]
 
-# Printer's E: memory (other memory locations also there. refer them)
+# Printer's E: memory (other memory locations also there. refer zebra Configuration)
 DEST_DRIVE = "E"
 
 
 def _build_du_payload(font_bytes: bytes, printer_filename: str) -> bytes:
     
-    name = Path(printer_filename).stem[:8].upper()
-    ext = Path(printer_filename).suffix.lstrip(".").upper() or "TTF"
+    name = Path(printer_filename).stem[:8].upper() # .stem removes file extension
+    ext = Path(printer_filename).suffix.lstrip(".").upper() or "TTF" #.TTF in this case
     header = f"~DU{DEST_DRIVE}:{name}.{ext},{len(font_bytes)},".encode("ascii")
-    return header + font_bytes
+    return header + font_bytes # ~DUE:BRUTALTY.TTF,123456, followed by binary data
 
 
-def send_zpl_bytes(payload: bytes, printer_name: str = PRINTER_NAME) -> None:
+def send_zpl_bytes(payload: bytes, printer_name: str = PRINTER_PACK_ID) -> None:
     
     resolved_name = _resolve_printer_name(printer_name)
 
-    winspool = ctypes.WinDLL("winspool.drv")
-    winspool.OpenPrinterW.argtypes = [wintypes.LPWSTR, ctypes.POINTER(wintypes.HANDLE), ctypes.c_void_p]
+    winspool = ctypes.WinDLL("winspool.drv") # windows print API
+    winspool.OpenPrinterW.argtypes = [wintypes.LPWSTR, ctypes.POINTER(wintypes.HANDLE), ctypes.c_void_p] #DLL Call Format for python (function Signatures)
     winspool.OpenPrinterW.restype = wintypes.BOOL
     winspool.StartDocPrinterW.argtypes = [wintypes.HANDLE, wintypes.DWORD, ctypes.POINTER(DOCINFO1)]
     winspool.StartDocPrinterW.restype = wintypes.DWORD
@@ -53,8 +53,8 @@ def send_zpl_bytes(payload: bytes, printer_name: str = PRINTER_NAME) -> None:
     try:
         job_id = 0
         last_error = 0
-        for datatype in ("RAW", None):
-            doc_info = DOCINFO1("BMS Font Install", None, datatype)
+        for datatype in ("RAW", None): # label printers accepts raw bytes. None is for other printers.
+            doc_info = DOCINFO1("Font Installation", None, datatype)
             job_id = winspool.StartDocPrinterW(hprinter, 1, ctypes.byref(doc_info))
             if job_id != 0:
                 break
@@ -68,11 +68,11 @@ def send_zpl_bytes(payload: bytes, printer_name: str = PRINTER_NAME) -> None:
                 raise OSError(f"StartPagePrinter failed (error {ctypes.GetLastError()}).")
 
             written = wintypes.DWORD(0)
-            buf = ctypes.create_string_buffer(payload, len(payload))
-            if not winspool.WritePrinter(hprinter, buf, len(payload), ctypes.byref(written)):
+            buf = ctypes.create_string_buffer(payload, len(payload)) # for long instructions
+            if not winspool.WritePrinter(hprinter, buf, len(payload), ctypes.byref(written)): # send zpl to printer
                 raise OSError(f"WritePrinter failed (error {ctypes.GetLastError()}).")
             if written.value != len(payload):
-                raise OSError(f"WritePrinter wrote {written.value}/{len(payload)} bytes.")
+                raise OSError(f"WritePrinter wrote {written.value}/{len(payload)} bytes.") # just for safety check (written/actual)
         finally:
             winspool.EndPagePrinter(hprinter)
             winspool.EndDocPrinter(hprinter)
@@ -100,9 +100,7 @@ def main() -> None:
         except OSError as exc:
             print(f"  FAILED: {exc}")
             continue
-        print(f"  Done — reference it in ZPL as ^A@N,h,w,{DEST_DRIVE}:{printer_filename}")
-
-    print("Font install finished, only one time upload needed.")
+        print("Successfully Installed ...")
 
 
 if __name__ == "__main__":

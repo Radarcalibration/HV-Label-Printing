@@ -4,17 +4,17 @@ import re
 from dataclasses import dataclass
 from datetime import date, datetime
 
-# OLD format plant codes
-PLANT_CODES = {
-    "jigani": "A",
-    "domlur": "B",
-}
-PLANT_BY_CODE = {code: name for name, code in PLANT_CODES.items()}
+# # OLD format
+# PLANT_CODES = {
+#     "jigani": "A",
+#     "domlur": "B",
+# }
+# PLANT_BY_CODE = {code: name for name, code in PLANT_CODES.items()}
 
-SERIAL_NUMBER_PATTERN = re.compile(
-    r"^(?P<plant>[AB])(?P<line>[123])(?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})"
-    r"(?P<serial_count>\d{5})$" #serial count trial
-)
+# SERIAL_NUMBER_PATTERN = re.compile(
+#     r"^(?P<plant>[AB])(?P<line>[123])(?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})"
+#     r"(?P<serial_count>\d{5})$" #serial count trial
+# )
 
 # -- NEW format code 
 NEW_PLANT_CODES = {
@@ -39,8 +39,8 @@ MODULE_VARIANT_CODES_NEW = {
     "16P": "A4",  # high voltage
     "24P": "A5",  # high voltage
     "27P": "A6",  # high voltage
-    # "8P": "A7",   # NA
-    # "10P": "A8",  #NA
+    # "8P": "A7",   # Shockwave
+    # "10P": "A8",  # Shockwave + tesseract
 }
 VARIANT_BY_CODE_NEW = {code: name for name, code in MODULE_VARIANT_CODES_NEW.items()}
 
@@ -70,7 +70,7 @@ CELL_MFR_BY_CODE_NEW = {
 }
 
 # Legacy shift codes are accepted only when parsing serials generated before the manufacturer-code change.
-SHIFT_CODES_NEW = {"A": "A", "B": "B", "C": "C"}
+# SHIFT_CODES_NEW = {"A": "A", "B": "B", "C": "C"}
 
 NEW_SERIAL_NUMBER_PATTERN = re.compile(
     r"^(?P<plant>[ABC])(?P<model>[ABCD])(?P<variant>A[3-6])(?P<line>[123])"
@@ -93,7 +93,7 @@ class ParsedSerialNumber:
     variant: str | None = None
     cell_mfr: str | None = None
     # Set only for legacy new-format serials that used a shift code.
-    shift: str | None = None
+    # shift: str | None = None
     category: str | None = None
 
     @property
@@ -121,7 +121,7 @@ def build_serial_number(
     model: str | None = None,
     variant: str | None = None,
     cell_mfr: str | None = None,
-    shift: str | None = None,
+    # shift: str | None = None,
     category: str | None = None,
 ) -> str:
     
@@ -129,17 +129,17 @@ def build_serial_number(
     if isinstance(when, datetime):
         when = when.date()
 
-    new_format_requested = any(v is not None for v in (model, variant, cell_mfr, shift, category))
+    new_format_requested = any(v is not None for v in (model, variant, cell_mfr,  category)) #shift,
 
-    if not new_format_requested:
-        if plant_key not in PLANT_CODES:
-            raise ValueError(f"Unsupported plant: {plant}")
-        if line not in {"1", "2", "3"}:
-            raise ValueError(f"Unsupported line: {line}")
+    # if not new_format_requested:
+    #     if plant_key not in PLANT_CODES:
+    #         raise ValueError(f"Unsupported plant: {plant}")
+    #     if line not in {"1", "2", "3"}:
+    #         raise ValueError(f"Unsupported line: {line}")
 
-        count = re.sub(r"\D", "", serial_count or "").zfill(5)[-5:] # serial count trial
+    #     count = re.sub(r"\D", "", serial_count or "").zfill(5)[-5:] # serial count trial
 
-        return f"{PLANT_CODES[plant_key]}{line}{when:%Y%m%d}{count}"
+    #     return f"{PLANT_CODES[plant_key]}{line}{when:%Y%m%d}{count}"
 
     # -- NEW format --
     if plant_key not in NEW_PLANT_CODES:
@@ -191,7 +191,7 @@ def build_serial_number_for_model(
     variant: str,
     cell_mfr: str, #| None = None,
     category: str,
-    shift: str | None = None,
+    # shift: str | None = None,
 ) -> str:
     
     return build_serial_number(
@@ -202,7 +202,7 @@ def build_serial_number_for_model(
         model=model,
         variant=variant,
         cell_mfr=cell_mfr,
-        shift=shift,
+        # shift=shift,
         category=category,
     )
 
@@ -225,7 +225,7 @@ def _parse_new_format(cleaned: str) -> ParsedSerialNumber | None:
         return None
     if variant_code not in VARIANT_BY_CODE_NEW:
         return None
-    if manufacturer_code not in CELL_MFR_BY_CODE_NEW and manufacturer_code not in SHIFT_CODES_NEW:
+    if manufacturer_code not in CELL_MFR_BY_CODE_NEW: # and manufacturer_code not in SHIFT_CODES_NEW:
         return None
 
     try:
@@ -244,36 +244,36 @@ def _parse_new_format(cleaned: str) -> ParsedSerialNumber | None:
         model=MODEL_BY_CODE[model_code],
         variant=VARIANT_BY_CODE_NEW[variant_code],
         cell_mfr=CELL_MFR_BY_CODE_NEW.get(manufacturer_code),
-        shift=manufacturer_code if manufacturer_code in SHIFT_CODES_NEW else None,
+        # shift=manufacturer_code if manufacturer_code in SHIFT_CODES_NEW else None,
         category=CATEGORY_BY_CODE_NEW[category_code],
     )
 
 
-def _parse_old_format(cleaned: str) -> ParsedSerialNumber | None:
-    match = SERIAL_NUMBER_PATTERN.match(cleaned)
-    if not match:
-        return None
+# def _parse_old_format(cleaned: str) -> ParsedSerialNumber | None:
+#     match = SERIAL_NUMBER_PATTERN.match(cleaned)
+#     if not match:
+#         return None
 
-    g = match.groupdict()
-    plant_code = g["plant"]
+#     g = match.groupdict()
+#     plant_code = g["plant"]
 
-    if plant_code not in PLANT_BY_CODE:
-        return None
+#     if plant_code not in PLANT_BY_CODE:
+#         return None
 
-    try:
-        date(int(g["year"]), int(g["month"]), int(g["day"]))
-    except ValueError:
-        return None
+#     try:
+#         date(int(g["year"]), int(g["month"]), int(g["day"]))
+#     except ValueError:
+#         return None
 
-    return ParsedSerialNumber(
-        plant=PLANT_BY_CODE[plant_code],
-        line=g["line"],
-        year=int(g["year"]),
-        month=int(g["month"]),
-        day=int(g["day"]),
-        serial_count=g["serial_count"],
-        raw=cleaned,
-    )
+#     return ParsedSerialNumber(
+#         plant=PLANT_BY_CODE[plant_code],
+#         line=g["line"],
+#         year=int(g["year"]),
+#         month=int(g["month"]),
+#         day=int(g["day"]),
+#         serial_count=g["serial_count"],
+#         raw=cleaned,
+#     )
 
 
 def parse_serial_number(value: str) -> ParsedSerialNumber | None:
@@ -281,7 +281,7 @@ def parse_serial_number(value: str) -> ParsedSerialNumber | None:
 
     if len(cleaned) == 20:
         return _parse_new_format(cleaned)
-    if len(cleaned) == 16:
-        return _parse_old_format(cleaned)
+    # if len(cleaned) == 16:
+    #     return _parse_old_format(cleaned)
 
-    return _parse_new_format(cleaned) or _parse_old_format(cleaned)
+    return _parse_new_format(cleaned) # or _parse_old_format(cleaned)

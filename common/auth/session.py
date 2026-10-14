@@ -5,12 +5,12 @@ from common.auth.user_store import ROLE_ADMIN, ROLE_OPERATOR
 
 class Session:
 
-    def __init__(self) -> None:
+    def __init__(self) -> None: # session object creation (constructor)
         self.username: str | None = None
         self.role: str | None = None
         self._password: str | None = None
 
-    @property
+    @property # to applicable for various variables
     def is_admin(self) -> bool:
         
         return self.role in (ROLE_ADMIN, ROLE_OPERATOR)

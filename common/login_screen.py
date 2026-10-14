@@ -46,5 +46,5 @@ class LoginScreen(ttk.Frame):
         if not ok:
             messagebox.showerror("Login", message, parent=self)
             return
-        self.unbind_all("<Return>")
+        self.unbind_all("<Return>") 
         self._on_success(message, password, role)

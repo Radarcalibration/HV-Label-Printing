@@ -374,5 +374,3 @@ The HV Label Printing project is a specialized desktop application for battery p
 - local history and configuration storage
 
 The project is designed for reliability on the factory floor, with a clear path toward more formal backend integration in the future if production requirements expand to multi-site or enterprise-level traceability.
-
-# `VX156060:A12026060806875`  instead of this pattern keep
