@@ -17,7 +17,6 @@ from models.hv.printing.zpl import (
     build_battery_pack_id_zpl_unified,
     build_bmb_cmb_combined_zpl,
     build_bmb_cmb_zpl,
-    # build_bms_id_zpl,
     # build_hv_module_label_domestic,
     # build_hv_module_label_export,
     build_hv_pack_label_domestic,
@@ -123,15 +122,12 @@ def build_bmb_cmb_label(*, kind: str, value: str, pack_qr_data: str = "") -> str
     return build_bmb_cmb_zpl(kind=kind, value=value, pack_qr_data=pack_qr_data)
 
 
-# def build_bms_id_label(*, bms_id: str, pack_qr_data: str = "") -> str:
-#     return build_bms_id_zpl(bms_id=bms_id, pack_qr_data=pack_qr_data)
 
-
-# def _emark_res(variant: str) -> str:
-#     full = get_emark(variant)
-#     if not full or "*" not in full:
-#         return full
-#     return full.split("*", 1)[1]
+def _emark_res(variant: str) -> str:
+    full = get_emark(variant)
+    if not full or "*" not in full:
+        return full
+    return full.split("*", 1)[1]
 
 
 def build_battery_pack_id_label(

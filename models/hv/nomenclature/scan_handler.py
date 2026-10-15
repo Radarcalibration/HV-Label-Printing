@@ -1,17 +1,16 @@
 from __future__ import annotations
-"""Pack serial QR format:  VX156060:A120260608006675
-VX156060:ABA51202605281U00111  #VX156060:ABA51202605281U123456
+"""Pack serial QR format: VX156060:ABA51202605281U00111  
 """
 
 import re
-from dataclasses import dataclass#, field
+from dataclasses import dataclass
 from enum import Enum
 
 from models.hv.gui.constants import (
     REESS_TO_VARIANT,
     get_cell_mfr_from_reess,
 )
-from models.hv.nomenclature.bms_id import parse_bmb_cmb_id, parse_bms_id, parse_bms_qr
+from models.hv.nomenclature.bms_id import parse_bmb_cmb_id
 from models.hv.nomenclature.module_id import ParsedModuleId, parse_module_id
 from models.hv.nomenclature.serial_number import ParsedSerialNumber, parse_serial_number
 
@@ -28,7 +27,7 @@ class ScanType(Enum):
     MODULE_ID = "module_id"
     BMB_ID = "bmb_id"
     CMB_ID = "cmb_id"
-    BMS_ID = "bms_id"  
+    # BMS_ID = "bms_id"  
     UNKNOWN = "unknown"
 
 
@@ -38,11 +37,9 @@ class ScanResult:
     scan_type: ScanType
     serial: ParsedSerialNumber | None = None
     module: ParsedModuleId | None = None
-    bms_id: str | None = None
-    bms_sw_version: str | None = None  
     bmb_cmb: object | None = None  
     pack_variant: str | None = None 
-    pack_revision: str | None = None  
+    # pack_revision: str | None = None  
     cell_mfr: str | None = None
 
 
@@ -65,7 +62,7 @@ def identify_scan(value: str) -> ScanResult:
                 scan_type=ScanType.SERIAL_NUMBER,
                 serial=serial,
                 pack_variant=variant,
-                pack_revision=None,
+                # pack_revision=None,
                 cell_mfr=get_cell_mfr_from_reess(reess_part),
             )
 
@@ -81,18 +78,5 @@ def identify_scan(value: str) -> ScanResult:
     if bmb_cmb is not None:
         scan_type = ScanType.BMB_ID if bmb_cmb.kind == "BMB" else ScanType.CMB_ID
         return ScanResult(raw=bmb_cmb.raw, scan_type=scan_type, bmb_cmb=bmb_cmb)
-
-    bms_qr = parse_bms_qr(cleaned)
-    if bms_qr is not None:
-        return ScanResult(
-            raw=bms_qr.bms_id,
-            scan_type=ScanType.BMS_ID,
-            bms_id=bms_qr.bms_id,
-            bms_sw_version=bms_qr.sw_version,
-        )
-
-    bms_id = parse_bms_id(cleaned)
-    if bms_id is not None:
-        return ScanResult(raw=bms_id, scan_type=ScanType.BMS_ID, bms_id=bms_id)
 
     return ScanResult(raw=cleaned.upper(), scan_type=ScanType.UNKNOWN)

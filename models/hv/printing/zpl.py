@@ -108,22 +108,6 @@ def build_bmb_cmb_zpl(*, kind: str, value: str, pack_qr_data: str = "") -> str:
     return b
 
 
-# def build_bms_id_zpl(*, bms_id: str, pack_qr_data: str = "") -> str:
-#     b = _header(600, 300)
-#     b += f"^FO00,120^BQN,2,8^FDQA,{_fd(bms_id)}^FS\n"
-#     b += f"^FO160,35^A0N,37,39^FDBMS DATA^FS\n"
-#     b += f"^FO160,70^GB170,3,3^FS\n"
-#     if pack_qr_data:
-#         b += f"^FO00,90^A0N,27,28^FDPack ID: {_fd(pack_qr_data[:31])}^FS\n"
-#         y_bms = 150
-#     else:
-#         y_bms = 140
-#     b += f"^FO185,{y_bms}^A0N,30,32^FDBMS ID: {_fd(bms_id)}^FS\n"
-#     b += f"^FO185,{y_bms + 70}^A0N,30,32^FDS/W Version: ^FS\n"
-#     b += _footer(2)
-#     return b
-
-
 def build_pack_qr_zpl(
     *,
     pack_qr_data: str,

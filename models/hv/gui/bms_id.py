@@ -4,7 +4,7 @@ import tkinter as tk
 from datetime import datetime
 from tkinter import messagebox, ttk
 
-from models.hv.gui.layout import DISPLAY_FONT, FIELD_FONT, FIELD_IPADY, LABEL_FONT, HEADING_FONT
+from models.hv.gui.layout import DISPLAY_FONT, FIELD_FONT, FIELD_IPADY, LABEL_FONT   #, HEADING_FONT
 from models.hv.gui.print_actions import dispatch_zpl
 from models.hv.gui.scan_history import open_scan_history
 from models.hv.gui.scanner import setup_hardware_scanner

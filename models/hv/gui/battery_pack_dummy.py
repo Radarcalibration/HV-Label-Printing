@@ -338,7 +338,7 @@ class BatteryPackDummyGUI:
         preview_frame = ttk.Frame(parent, padding=(0, 6, 0, 0))
         preview_frame.pack(fill=tk.X)
         ttk.Label(preview_frame, text="Pack QR Preview", font=HEADING_FONT).pack(anchor=tk.W, pady=(0, 6))
-        self.preview_var = tk.StringVar(value="")
+        self.preview_var = tk.StringVar(value="--Waiting for Module Integration--")
         ttk.Label(
             preview_frame, textvariable=self.preview_var,
             font=("Segoe UI", 11), foreground="#0a5c9e", anchor=tk.W, wraplength=1000,
@@ -376,7 +376,7 @@ class BatteryPackDummyGUI:
         self.vars["cell_mfr"].set("")
         self._on_variant_or_revision_change()
         self._reset_integration()
-        self.preview_var.set("")
+        self.preview_var.set("--Waiting for Module Integration--")
 
     def _on_scan(self, raw: str) -> None:
         result = identify_scan(raw)
@@ -384,9 +384,6 @@ class BatteryPackDummyGUI:
 
         if result.scan_type == ScanType.SERIAL_NUMBER:
             messagebox.showwarning("Scan", "scan module ID QR codes (M1–M4).", parent=self.root)
-            return
-        if result.scan_type == ScanType.BMS_ID:
-            messagebox.showwarning("Scan", "BMS ID scanned. Expects module ID QR codes.", parent=self.root)
             return
 
         if result.scan_type == ScanType.MODULE_ID and result.module is not None:
@@ -512,7 +509,7 @@ class BatteryPackDummyGUI:
         self.integration_status_var.set("INTEGRATION OK")
         self._integration_ok = True
 
-        self.preview_var.set(f"QR Data: {pack_qr}   |   Serial: {serial}")
+        self.preview_var.set(f"QR Data: {pack_qr}")
         self._collect_extra_fields_then_print()
 
     def _collect_extra_fields_then_print(self) -> None:
@@ -640,7 +637,7 @@ class BatteryPackDummyGUI:
             self.vars["cell_mfr"].set("")
             self._on_variant_or_revision_change()
             self._reset_integration()
-            self.preview_var.set("")
+            self.preview_var.set("--Waiting for Module Integration--")
 
     def _open_history(self) -> None:
         open_scan_history(self.root, print_mode=self.print_var.get(), variant=self.vars["variant"].get(), origin="dummy")
@@ -650,7 +647,7 @@ class BatteryPackDummyGUI:
             module_var.set("")
         self.vars["cell_mfr"].set("")
         self._reset_integration()
-        self.preview_var.set("")
+        self.preview_var.set("--Waiting for Module Integration--")
         self._true_date = datetime.now().date()
         new_serial = load_pack_serial()
         self.serial_number_var.set(new_serial)
@@ -718,7 +715,7 @@ class BatteryPackDummyGUI:
                 self._param_labels,
                 rated_capacity=params["rated_capacity"],
                 max_voltage=params["max_voltage"],
-                model_number=get_type_of_reess(variant, cell_mfr) if cell_mfr else "",
+                model_number=get_type_of_reess(variant, cell_mfr) if cell_mfr else "Waiting...",
                 tac_number=params["tac_number"],
                 emark=params["emark"],
                 category=self.vars["category"].get(),

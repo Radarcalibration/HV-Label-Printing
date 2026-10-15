@@ -5,7 +5,7 @@ from tkinter import messagebox, ttk
 
 from models.hv.gui.battery_parameters import build_battery_parameters_panel, set_battery_parameters
 from models.hv.gui.category_controls import add_category_field, bind_category_variant
-from models.hv.gui.constants import VARIANT_OPTIONS, VARIANT_PARAMS, format_pack_qr_data, get_emark, get_type_of_reess
+from models.hv.gui.constants import VARIANT_OPTIONS, VARIANT_PARAMS, format_pack_qr_data, get_type_of_reess #,get_emark,
 from models.hv.gui.layout import FIELD_FONT, FIELD_IPADY, HEADING_FONT, LABEL_FONT, configure_equal_columns
 from models.hv.gui.permissions import set_combobox_enabled
 from models.hv.gui.print_actions import dispatch_zpl
@@ -46,7 +46,7 @@ class BatteryPackIdGUI:
         self._serial_number_entry: ttk.Entry | None = None
         self.category_var = tk.StringVar(value="Domestic")
         self.variant_var = tk.StringVar(value=VARIANT_OPTIONS[-1])
-        self.cell_mfr_var = tk.StringVar(value="")
+        self.cell_mfr_var = tk.StringVar(value="--Waiting for Scan--")
         self.scanner_var = tk.StringVar()
         self.print_var = tk.StringVar(value="print")
 
@@ -89,7 +89,7 @@ class BatteryPackIdGUI:
         manufacturer_frame.grid(row=0, column=2, sticky="nsew", padx=(0, 10))
         ttk.Label(manufacturer_frame, text="Cell Manufacturer", font=LABEL_FONT).pack(anchor=tk.W)
         manufacturer_value = ttk.Entry(
-            manufacturer_frame, textvariable=self.cell_mfr_var, font=FIELD_FONT,
+            manufacturer_frame, textvariable=self.cell_mfr_var, font=FIELD_FONT, state="disabled",
         )
         manufacturer_value.pack(fill=tk.X, pady=(5, 0), ipady=FIELD_IPADY)
 
@@ -139,7 +139,7 @@ class BatteryPackIdGUI:
             self._param_labels,
             rated_capacity=params["rated_capacity"],
             max_voltage=params["max_voltage"],
-            model_number=get_type_of_reess(variant, cell_mfr) if cell_mfr else "",
+            model_number=get_type_of_reess(variant, cell_mfr) if cell_mfr else "NA",
             tac_number=params["tac_number"],
             emark=params["emark"],
             category=category,
@@ -172,11 +172,11 @@ class BatteryPackIdGUI:
         """Clear the scan box and the displayed serial/parameters, ready
         for the next scan."""
         self.scanner_var.set("")
-        self.serial_number_var.set("")
+        self.serial_number_var.set("--Waiting for Scan--")
         if self._param_labels:
             for widget in self._param_labels.values():
                 widget.configure(text="")
-        self.cell_mfr_var.set("")
+        self.cell_mfr_var.set("--Waiting for Scan--")
         self._on_variant_change()
 
     def _open_history(self) -> None:
@@ -197,7 +197,7 @@ class BatteryPackIdGUI:
     def _param_value(self, key: str) -> str:
         widget = self._param_labels.get(key)
         if widget is None:
-            return ""
+            return "NA"
         return str(widget.cget("text"))
 
     def _mfg_date_for_serial(self, serial_number: str) -> str:
@@ -245,7 +245,7 @@ class BatteryPackIdGUI:
         pw = self._session.excel_password if hasattr(self, "_session") and self._session else "06082003"
         record = PackIdScanRecord(
             date=self._mfg_date_for_serial(serial_number),
-            time=now.strftime("%I:%M:%S %p").lstrip("0"),
+            time=now.strftime("%I:%M:%S %p").lstrip("0"), # removes leading 0's
             serial_number=serial_number,
             variant=self.variant_var.get(),
             pack_qr_data=pack_qr_data,
@@ -257,6 +257,9 @@ class BatteryPackIdGUI:
 
     def _reset_fields(self) -> None:
         self.scanner_var.set("")
+        self.cell_mfr_var.set("Waiting for Scan--")
+        self.serial_number_var.set("--Waiting for Scan--")
+        
         
 
     def _on_scan(self, raw: str) -> None:
@@ -292,14 +295,6 @@ class BatteryPackIdGUI:
             messagebox.showwarning(
                 "Scan",
                 "Module ID scanned. expects the pack serial QR code.",
-                parent=self.root,
-            )
-            return
-
-        if result.scan_type == ScanType.BMS_ID:
-            messagebox.showwarning(
-                "Scan",
-                "BMS ID scanned. expects the pack serial QR code.",
                 parent=self.root,
             )
             return

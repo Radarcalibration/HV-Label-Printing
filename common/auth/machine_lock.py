@@ -35,7 +35,7 @@ def is_authorized() -> bool:
 
 
 if __name__ == "__main__":
-    # python -m auth.machine_lock
+    # python -m common.auth.machine_lock
     print("This machine's hash:")
     print(get_machine_hash())
     print()

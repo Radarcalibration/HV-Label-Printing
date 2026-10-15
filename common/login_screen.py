@@ -18,7 +18,7 @@ class LoginScreen(ttk.Frame):
         container.place(relx=0.5, rely=0.5, anchor="center")
 
         ttk.Label(
-            container, text="BMS Label Suite — Login",
+            container, text="Login Here",
             font=("Segoe UI", 16, "bold"),
         ).grid(row=0, column=0, columnspan=2, pady=(0, 20))
 

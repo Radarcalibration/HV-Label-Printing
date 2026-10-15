@@ -29,13 +29,13 @@ _SUB_PATTERN = re.compile(
 )
 # VX156600-D1611105J260302
 _FULL_PATTERN = re.compile(
-    r"^(?P<part_number>V[QX]15[0-9]{4})-(?P<sub>[C-F][1-3][1-6][123ABC][123][123]\d{2}[A-L]\d{2}\d{4})$"
+    r"^(?P<part_number>V[QX][0-9]{6})-(?P<sub>[C-F][1-3][1-6][123ABC][123][123]\d{2}[A-L]\d{2}\d{4})$"
 )
 
 
 @dataclass(frozen=True)
 class ParsedModuleId:
-    variant: str        
+    variant: str
     part_number: str   
     group: str        
     cell_mfr: str      
@@ -83,7 +83,7 @@ def build_module_sub_id(
     if line not in ("1", "2", "3"):
         raise ValueError(f"Invalid line: {line}")
 
-    count = re.sub(r"\D", "", serial).zfill(4)[-4:]
+    count = re.sub(r"\D", "", serial).zfill(4)[-4:] # \D removes non-numeric keys. (4) converts to len(4) and (-4) returns last 4 digits. 
 
     return (
         f"{v_code}"
@@ -121,7 +121,7 @@ def build_full_module_id(
 
 
 def build_all_module_ids(
-    *,
+    *, # to specify parameters insted of values.
     variant: str,
     group: str,
     cell_mfr: str,
@@ -134,8 +134,8 @@ def build_all_module_ids(
 ) -> list[str]:
     start = int(re.sub(r"\D", "", start_serial or "0") or "0")
     ids: list[str] = []
-    for offset in range(count):
-        serial = str(start + offset).zfill(4)[-4:]
+    for offset in range(count): # count 4 (m1-m4)
+        serial = str(start + offset).zfill(4)[-4:] # store last 4 digit and compares with other modules
         ids.append(
             build_full_module_id(
                 variant=variant, group=group, cell_mfr=cell_mfr,

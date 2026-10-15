@@ -2,10 +2,7 @@ from __future__ import annotations
 
 import tkinter as tk
 from tkinter import ttk
-from tkinter import messagebox
 from pathlib import Path
-import os
-import subprocess
 import sys
 
 from models.hv.gui.auth_bar import AuthBar
@@ -26,34 +23,6 @@ class HVApp(ttk.Frame):
 
 
     def __init__(self, parent: tk.Misc, *, session) -> None:
-        
-        def open_lv_printer():
-                exe_path = r"C:\Users\RadarCalibration\Desktop\LABEL_PRINT\LV Label Printer.exe"
-        
-                if os.path.exists(exe_path):
-                    subprocess.Popen([exe_path])
-                    sys.exit()
-                else:
-                    messagebox.showerror("error", "LV path not found")
-        
-        
-        def open_shockwave_printer():
-                exe_path = r"C:\Users\RadarCalibration\Desktop\battery_terminal_qr_label_tool\qr_label_tool\dist\main\main.exe"
-        
-                if os.path.exists(exe_path):
-                    subprocess.Popen([exe_path])
-                    sys.exit()
-                else:
-                    messagebox.showerror("error", "Shockwave path not found")
-                
-        def open_tesseract_printer():
-            exe_path= r"C:\Users\RadarCalibration\Desktop\qr generator print.exe"
-            
-            if os.path.exists(exe_path):
-                subprocess.Popen([exe_path])
-                sys.exit(1)
-            else:
-                messagebox.showerror("error", "Tesseract path not found")
         
         def _resource_path(relative: str) -> Path:
             base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
@@ -89,11 +58,6 @@ class HVApp(ttk.Frame):
         self.auth_bar = AuthBar(top_bar, self.session, self._on_auth_change)
         self.auth_bar.pack(side=tk.RIGHT)
         
-        ttk.Button(top_bar, text="LV Label Printer", command=open_lv_printer, state="disabled").pack(side="right", padx=10)
-        ttk.Button(top_bar, text="Shockwave Label Printer", command=open_shockwave_printer, state="disabled").pack(side="right", padx=10)
-        ttk.Button(top_bar, text="Tesseract Label Printer", command=open_tesseract_printer, state="disabled").pack(side="right", padx=10)
-        
-
         ttk.Separator(self, orient=tk.HORIZONTAL).pack(fill=tk.X)
 
         selector_bar = ttk.Frame(self, padding=(12, 14))
