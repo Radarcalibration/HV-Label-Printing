@@ -4,7 +4,7 @@ import tkinter as tk
 from collections.abc import Callable
 from tkinter import ttk
 
-_SCAN_IDLE_MS = 250
+_SCAN_IDLE_MS = 100
 
 
 def setup_hardware_scanner(

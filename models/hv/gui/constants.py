@@ -113,7 +113,7 @@ CELL_MFR_OPTIONS = list(CELL_MFR_CODES.keys())
 PLANT_CODES_HV = {
     "Jigani": ("1"),
     "Domlur": ("2"),
-    "TBD": ("3"),
+    "Plant_c": ("3"),
 }
 PLANT_BY_CODE_HV = {
     "1": "Jigani",
@@ -122,8 +122,8 @@ PLANT_BY_CODE_HV = {
     "2": "Domlur",
     "B": "Domlur",
 
-    "3": "TBD",
-    "C": "TBD",
+    "3": "Plant_c",
+    "C": "Plant_c",
 }
 PLANT_OPTIONS = list(PLANT_CODES_HV.keys())
 

@@ -67,7 +67,7 @@ class ScanHistoryDialog(tk.Toplevel):
         *,
         print_mode: str = "print",
         variant: str = VARIANT_OPTIONS[-1],
-        revision: str = "V0",
+        # revision: str = "V0",
         session=None,
         origin: str = "dummy",
     ) -> None:
@@ -79,7 +79,7 @@ class ScanHistoryDialog(tk.Toplevel):
 
         self._print_mode = print_mode
         self._variant = variant
-        self._revision = revision
+        # self._revision = revision
         self._session = session
         self._origin = origin  
         self._col_defs = _COL_DEFS[origin]
@@ -195,7 +195,6 @@ class ScanHistoryDialog(tk.Toplevel):
     def _on_reprint(self) -> None:
         selection = self.tree.selection()
         if not selection:
-            messagebox.showwarning("Reprint", "Select a row to reprint.", parent=self)
             return
         idx = int(selection[0])
         rec = self._records[idx]
@@ -321,13 +320,13 @@ def open_scan_history(
     *,
     print_mode: str = "print",
     variant: str = VARIANT_OPTIONS[-1],
-    revision: str = "V0",
+    # revision: str = "V0",
     session=None,
     origin: str = "dummy",
 ) -> None:
     try:
         dialog = ScanHistoryDialog(
-            parent, print_mode=print_mode, variant=variant, revision=revision,
+            parent, print_mode=print_mode, variant=variant, # revision=revision,
             session=session, origin=origin,
         )
         

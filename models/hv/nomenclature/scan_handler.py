@@ -26,8 +26,7 @@ class ScanType(Enum):
     SERIAL_NUMBER = "serial_number"
     MODULE_ID = "module_id"
     BMB_ID = "bmb_id"
-    CMB_ID = "cmb_id"
-    # BMS_ID = "bms_id"  
+    CMB_ID = "cmb_id"  
     UNKNOWN = "unknown"
 
 
@@ -39,7 +38,7 @@ class ScanResult:
     module: ParsedModuleId | None = None
     bmb_cmb: object | None = None  
     pack_variant: str | None = None 
-    # pack_revision: str | None = None  
+    pack_revision: str | None = None  
     cell_mfr: str | None = None
 
 
@@ -62,7 +61,7 @@ def identify_scan(value: str) -> ScanResult:
                 scan_type=ScanType.SERIAL_NUMBER,
                 serial=serial,
                 pack_variant=variant,
-                # pack_revision=None,
+                pack_revision=None,
                 cell_mfr=get_cell_mfr_from_reess(reess_part),
             )
 

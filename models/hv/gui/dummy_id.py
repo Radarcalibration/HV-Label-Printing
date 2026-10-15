@@ -109,7 +109,7 @@ class DummyIdGUI:
 
         self._parsed_serial = result.serial
         self.cell_mfr_var.set(
-            result.cell_mfr if result.cell_mfr in DUMMY_CELL_MFR_OPTIONS else "Select"
+            result.cell_mfr if result.cell_mfr in DUMMY_CELL_MFR_OPTIONS else "--Select--"
         )
         self.serial_entry_var.set(result.serial.raw)
         self._open_details_popup(preselect_variant=result.pack_variant)
@@ -134,6 +134,7 @@ class DummyIdGUI:
             values=DUMMY_CELL_MFR_OPTIONS,
             state="readonly",
             width=22,
+            justify="center",
         ).grid(row=1, column=1, sticky="ew", pady=3)
 
         parsed = self._parsed_serial

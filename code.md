@@ -1,4 +1,4 @@
-HV Label Printing.
+# HV Label Printing.
 
 # main.py
 Functions:
@@ -218,7 +218,6 @@ Functions:
 - `_check_and_print()`: validates pack QR plus BMB/CMB and sends the combined print job.
 - `_reset_display()`: clears all BMS fields after a successful action.
 - `run()`: starts the GUI loop.
-- `open_bms_id()`: factory function.
 - `main()`: standalone run helper.
 
 # models/hv/gui/category_controls.py
@@ -326,9 +325,6 @@ Classes:
 Functions:
 - `parse_bmb_cmb_id()`: reads a raw BMB or CMB identifier and extracts its fields.
 - `short_bmb_cmb_id()`: creates the short display ID used on labels.
-- `parse_bms_id()`: reads a full BMS ID input and returns the parsed object.
-- `parse_bms_qr()`: reads a BMS QR value and extracts all values from the encoded string.
-- `is_valid_bms_id()`: validates whether the scanned BMS ID is in the expected format.
 
 # models/hv/nomenclature/module_id.py
 Class:
@@ -368,7 +364,6 @@ Functions:
 - `build_pack_qr_label()`: builds a pack QR label using serial, model, and date data.
 - `build_bmb_cmb_combined_label()`: builds the combined BMB/CMB label used in the BMS screen.
 - `build_bmb_cmb_label()`: builds a simpler BMB/CMB label when needed.
-- `build_bms_id_label()`: creates the BMS ID label.
 - `_emark_res()`: resolves the E-mark resistor details for the label.
 - `build_battery_pack_id_label()`: builds the battery pack ID label for the dedicated screen.
 - `build_scanned_module_label()`: builds a scanned-module label output.
@@ -394,7 +389,6 @@ Functions:
 - `build_hv_pack_label_domestic()`: builds the domestic HV pack label.
 - `build_bmb_cmb_combined_zpl()`: builds the combined BMB/CMB ZPL string.
 - `build_bmb_cmb_zpl()`: builds the BMB/CMB label text.
-- `build_bms_id_zpl()`: builds the BMS ID label.
 - `build_pack_qr_zpl()`: builds the raw pack-QR label string.
 - `build_battery_pack_id_zpl_unified()`: builds the unified battery pack ID label.
 - `build_hv_pack_label_export()`: builds the export HV pack label.

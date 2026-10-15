@@ -99,7 +99,7 @@ def _build_header(ws, excel_password: str) -> None:
     ws.protection = _protection(excel_password, enabled=PROTECT_SHEET)
 
 
-def _get_sheet(wb: openpyxl.Workbook, excel_password: str):#anna
+def _get_sheet(wb: openpyxl.Workbook, excel_password: str):
     if SHEET_NAME in wb.sheetnames:
         return wb[SHEET_NAME]
     ws = wb.create_sheet(title=SHEET_NAME, index=0)
