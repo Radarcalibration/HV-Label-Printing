@@ -363,6 +363,13 @@ class BatteryPackDummyGUI:
         parsed = parse_module_id(m1_raw)
         return parsed.plant if parsed is not None else None
 
+    def _m1_format_is_compact(self) -> bool | None:
+        m1_raw = self._module_vars[0].get().strip()
+        if not m1_raw:
+            return None
+        parsed = parse_module_id(m1_raw)
+        return parsed.is_compact_format if parsed is not None else None
+
     def _m1_part_number(self) -> str | None:
         m1_raw = self._module_vars[0].get().strip()
         if not m1_raw:
@@ -416,8 +423,20 @@ class BatteryPackDummyGUI:
             m1_variant = self._m1_variant()
             m1_plant = self._m1_plant()
             m1_part_number = self._m1_part_number()
+            m1_compact_format = self._m1_format_is_compact()
             category = self.vars["category"].get().strip().lower()
 
+            if (
+                module_number > 1
+                and m1_compact_format is not None
+                and result.module.is_compact_format != m1_compact_format
+            ):
+                messagebox.showerror(
+                    "Module ID format mismatch",
+                    f"M{module_number} must use the same module ID format as M1.",
+                    parent=self.root,
+                )
+                return
             if category == "export" and incoming_variant not in variants_for_category("Export"):
                 messagebox.showerror(
                     "Variant error",
@@ -439,7 +458,12 @@ class BatteryPackDummyGUI:
                     parent=self.root,
                 )
                 return
-            if module_number > 1 and m1_plant is not None and incoming_plant != m1_plant:
+            if (
+                module_number > 1
+                and m1_plant is not None
+                and incoming_plant is not None
+                and incoming_plant != m1_plant
+            ):
                 messagebox.showerror(
                     "Plant mismatch",
                     f"M{module_number} is from {incoming_plant} but M1 is from {m1_plant}.",
@@ -467,16 +491,29 @@ class BatteryPackDummyGUI:
             return
 
         variants = []
-        plants = []
-        cell_mfrs = []
+        plants: list[str] = []
+        cell_mfrs: list[str] = []
+        formats: set[bool] = set()
         for mv in self._module_vars:
             p = parse_module_id(mv.get().strip())
             if p is None:
                 self._reset_integration()
                 return
             variants.append(p.variant)
-            plants.append(p.plant)
-            cell_mfrs.append(p.cell_mfr)
+            formats.add(p.is_compact_format)
+            if p.plant is not None:
+                plants.append(p.plant)
+            if p.cell_mfr is not None:
+                cell_mfrs.append(p.cell_mfr)
+        if len(formats) > 1:
+            messagebox.showerror(
+                "Module ID format mismatch",
+                "All four modules must use the same module ID format.",
+                parent=self.root,
+            )
+            self._reset_integration()
+            return
+        compact_format = formats == {True}
 
         if len(set(variants)) > 1:
             messagebox.showerror("variants mismatch", "All modules must be the same variant.", parent=self.root)
@@ -493,8 +530,9 @@ class BatteryPackDummyGUI:
             return
 
         variant = variants[0]
-        cell_mfr = cell_mfrs[0]
-        self.vars["cell_mfr"].set(cell_mfr)
+        if not compact_format:
+            cell_mfr = cell_mfrs[0]
+            self.vars["cell_mfr"].set(cell_mfr)
         serial = load_pack_serial()
         if not serial:
             self._rebuild_and_store_serial()
@@ -504,15 +542,18 @@ class BatteryPackDummyGUI:
         self._on_variant_or_revision_change()
         self.serial_number_var.set(serial)
 
+        if compact_format:
+            self._collect_extra_fields_then_print(compact_format=True)
+            return
+
         pack_qr = format_pack_qr_data(variant=variant, serial_number=serial, cell_mfr=cell_mfr)
         self.pack_qr_var.set(pack_qr)
         self.integration_status_var.set("INTEGRATION OK")
         self._integration_ok = True
-
         self.preview_var.set(f"QR Data: {pack_qr}")
         self._collect_extra_fields_then_print()
 
-    def _collect_extra_fields_then_print(self) -> None:
+    def _collect_extra_fields_then_print(self, *, compact_format: bool = False) -> None:
         popup = tk.Toplevel(self.root)
         popup.title("Pack Details")
         popup.resizable(False, False)
@@ -529,13 +570,15 @@ class BatteryPackDummyGUI:
             row=1, column=1, sticky=tk.W, pady=3
         )
 
-        fields = [
-            ("Ref No",        "ref_no",        None),
-        ]
+        fields = []
+        if compact_format:
+            fields.append(("Cell Manufacturer", "cell_mfr", CELL_MFR_OPTIONS))
+        fields.append(("Ref No", "ref_no", None))
         local_vars: dict[str, tk.StringVar] = {}
         for row_idx, (label, key, options) in enumerate(fields, start=2):
             ttk.Label(frame, text=label).grid(row=row_idx, column=0, sticky=tk.W, pady=3, padx=(0, 10))
-            var = tk.StringVar(value=self.vars[key].get())
+            default_value = "--Select--" if key == "cell_mfr" else self.vars[key].get()
+            var = tk.StringVar(value=default_value)
             local_vars[key] = var
             if options:
                 w = ttk.Combobox(frame, textvariable=var, values=options, state="readonly", width=22)
@@ -543,15 +586,41 @@ class BatteryPackDummyGUI:
                 w = ttk.Entry(frame, textvariable=var, width=24)
             w.grid(row=row_idx, column=1, sticky=tk.EW, pady=3)
 
-        def _on_ok() -> None:
+        def _continue_to_print() -> None:
+            if compact_format:
+                cell_mfr = local_vars["cell_mfr"].get()
+                supported_cell_mfrs = [
+                    option
+                    for option in CELL_MFR_OPTIONS
+                    if get_type_of_reess(self.vars["variant"].get(), option) != "NA"
+                ]
+                if cell_mfr not in supported_cell_mfrs:
+                    messagebox.showwarning(
+                        "Cell Manufacturer",
+                        "Select a supported cell manufacturer to continue.",
+                        parent=popup,
+                    )
+                    return
+                self.vars["cell_mfr"].set(cell_mfr)
+                pack_qr = format_pack_qr_data(
+                    variant=self.vars["variant"].get(),
+                    serial_number=self.serial_number_var.get().strip(),
+                    cell_mfr=cell_mfr,
+                )
+                self.pack_qr_var.set(pack_qr)
+                self.integration_status_var.set("INTEGRATION OK")
+                self._integration_ok = True
+                self.preview_var.set(f"QR Data: {pack_qr}")
             for key, var in local_vars.items():
                 self.vars[key].set(var.get())
             popup.destroy()
             self.root.after(50, self._auto_print_and_reset)
 
+        def _on_ok() -> None:
+            _continue_to_print()
+
         def _on_skip() -> None:
-            popup.destroy()
-            self.root.after(50, self._auto_print_and_reset)
+            _continue_to_print()
 
         btn_row = ttk.Frame(frame)
         btn_row.grid(row=len(fields) + 2, column=0, columnspan=2, sticky=tk.E, pady=(12, 0))

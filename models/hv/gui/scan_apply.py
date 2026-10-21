@@ -19,11 +19,12 @@ def apply_serial_fields(vars_map: dict[str, tk.StringVar], parsed: ParsedSerialN
 
 
 def apply_module_fields(vars_map: dict[str, tk.StringVar], parsed: ParsedModuleId) -> None:
-    
     vars_map["variant"].set(parsed.variant)
-    vars_map["plant"].set(parsed.plant)
-    vars_map["line"].set(parsed.line)
-    if "cell_mfr" in vars_map:
+    if parsed.plant is not None:
+        vars_map["plant"].set(parsed.plant)
+    if parsed.line is not None:
+        vars_map["line"].set(parsed.line)
+    if parsed.cell_mfr is not None and "cell_mfr" in vars_map:
         vars_map["cell_mfr"].set(parsed.cell_mfr)
     if "group" in vars_map:
         vars_map["group"].set(parsed.group)

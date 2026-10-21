@@ -105,4 +105,21 @@ icon, bundling `assets/` and `data/`.
 - Pillow (for logo image handling, if regenerating `assets/logo.ico`)
 - Three Zebra ZD421 printers installed with ZPL drivers, named as above
 
+## Streamlit production-station version
+
+The Streamlit UI is an alternative to the Tkinter entry point; it does not replace
+or modify the Tkinter screens. Install the requirements and start it from the
+repository root on an authorized Windows production station:
+
+```powershell
+python -m pip install -r requirements.txt
+python -m streamlit run streamlit/app.py
+```
+
+The station must have the required Zebra printers installed. Printing is sent by
+the Windows machine running Streamlit, and machine authorization is checked on
+that machine rather than on the browser client. The Streamlit version reuses the
+existing local account database and scan workbooks, so it should be run on the
+same production station that owns those files.
+
 # created by Anil D

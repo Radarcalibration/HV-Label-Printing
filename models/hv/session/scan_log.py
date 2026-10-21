@@ -100,7 +100,8 @@ UNLOCKED_COLS = {
 
 @dataclass
 class ScanRecord:
-    date: str               = ""
+    sl_n0                 = ""
+    date: str              = ""
     time: str               = ""
     serial_count: str       = ""
     ref_no: str             = ""
@@ -126,9 +127,9 @@ class ScanRecord:
     def is_unacknowledged(self) -> bool:
         return self.has_issue and not self.admin_ack.strip()
 
-    def as_row(self, sl_no: int) -> list:
+    def as_row(self) -> list:
         return [
-            sl_no,
+            self.sl_no,
             self.date,
             self.time,
             self.serial_count,

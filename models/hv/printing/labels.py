@@ -64,7 +64,7 @@ def build_hv_pack_label(
 ) -> str:
     is_export = category.strip().lower() == "export"
     module = parse_module_id(module_id)
-    if module is None:
+    if module is None or module.cell_mfr is None:
         raise ValueError("Invalid module ID")
     cell_mfr = module.cell_mfr
     params = dict(

@@ -1,1 +1,0 @@
-upto date- v8, review for serial encoded cell_mfr which is replaced from shift. (refer common/nomenclature/serial_number.py)
