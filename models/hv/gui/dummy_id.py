@@ -1,9 +1,9 @@
-from __future__ import annotations
-
 import tkinter as tk
 from datetime import datetime
 from tkinter import messagebox, ttk
+import requests
 
+from api.Client import send_dummy_scan
 from models.hv.gui.battery_parameters import build_battery_parameters_panel, set_battery_parameters
 from models.hv.gui.constants import (
     VARIANT_OPTIONS,
@@ -240,7 +240,7 @@ class DummyIdGUI:
         now = datetime.now()
         record = ScanRecord(
             date=mfg_date,
-            time=now.strftime("%I:%M:%S %p").lstrip("0"),
+            time=now.strftime("%I:%M:%S %p"),
             serial_count=parsed.serial_count,
             ref_no=ref_no,
             variant=variant,
@@ -256,7 +256,15 @@ class DummyIdGUI:
             excel_pw = self._session.excel_password if self._session else "06082003"
             append_scan_record(record, excel_password=excel_pw)
         except Exception as exc:
-            messagebox.showwarning("Log Error", f"Could not write to scan log:\n{exc}", "colse the excel sheet and try again", parent=self.root)
+            messagebox.showwarning(
+                "Log Error",
+                f"Could not write to scan log:\n{exc}\nClose the Excel sheet and try again.",
+                parent=self.root,
+            )
+        try:
+            send_dummy_scan(record)
+        except requests.exceptions.RequestException as e:
+                print("Request failed:", e, parent=self.root)
 
         self.serial_entry_var.set("")
         self._parsed_serial = None

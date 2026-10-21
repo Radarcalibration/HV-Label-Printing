@@ -1,4 +1,4 @@
-from __future__ import annotations
+ 
 """ VX156610-E1611109G260076 VQ150060-E1311109G260076 """
 
 import re

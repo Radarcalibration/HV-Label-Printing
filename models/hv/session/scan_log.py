@@ -1,4 +1,4 @@
-from __future__ import annotations
+ 
 
 import os
 import stat
@@ -100,7 +100,6 @@ UNLOCKED_COLS = {
 
 @dataclass
 class ScanRecord:
-    sl_n0                 = ""
     date: str              = ""
     time: str               = ""
     serial_count: str       = ""
@@ -127,9 +126,9 @@ class ScanRecord:
     def is_unacknowledged(self) -> bool:
         return self.has_issue and not self.admin_ack.strip()
 
-    def as_row(self) -> list:
+    def as_row(self, sl_no: int) -> list:
         return [
-            self.sl_no,
+            sl_no,
             self.date,
             self.time,
             self.serial_count,

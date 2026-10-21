@@ -1,9 +1,9 @@
-from __future__ import annotations
-
 import tkinter as tk
 from datetime import datetime
 from tkinter import messagebox, ttk
+import requests
 
+from api.Client import send_dummy_scan
 from models.hv.gui.battery_parameters import build_battery_parameters_panel, set_battery_parameters
 from models.hv.gui.category_controls import add_category_field, bind_category_variant
 from models.hv.gui.constants import (
@@ -40,7 +40,7 @@ _RESET_DELAY_MS = 200
 
 
 def _format_time(dt: datetime) -> str:
-    return dt.strftime("%I/%M/%S %p").lstrip("0") #.lstrip ("0") removes leading 0s
+    return dt.strftime("%I/%M/%S %p")
 
 
 class BatteryPackDummyGUI:
@@ -649,7 +649,7 @@ class BatteryPackDummyGUI:
         serial_count = _parsed.serial_count if _parsed else ""
         
         now = datetime.now()
-        mfg_time = now.strftime("%I:%M:%S %p").lstrip("0")
+        mfg_time = now.strftime("%I:%M:%S %p")
         
         category = self.vars["category"].get().strip().lower()
 
@@ -684,6 +684,10 @@ class BatteryPackDummyGUI:
             log_saved = True
         except Exception as exc:
             messagebox.showerror("Log Error", f"Could not able to write scan log:\n{exc}", parent=self.root)
+        try:
+            send_dummy_scan(record)
+        except requests.exceptions.RequestException as e:
+                print("Request failed:", e, parent=self.root)
 
         zpl = build_pack_qr_label(
             pack_qr_data=pack_qr,

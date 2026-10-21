@@ -1,8 +1,10 @@
-from __future__ import annotations
+ 
 
 import tkinter as tk
 from tkinter import messagebox, ttk
+import requests
 
+from api.Client import send_pack_id_scan
 from models.hv.gui.battery_parameters import build_battery_parameters_panel, set_battery_parameters
 from models.hv.gui.category_controls import add_category_field, bind_category_variant
 from models.hv.gui.constants import VARIANT_OPTIONS, VARIANT_PARAMS, format_pack_qr_data, get_type_of_reess #,get_emark,
@@ -245,7 +247,7 @@ class BatteryPackIdGUI:
         pw = self._session.excel_password if hasattr(self, "_session") and self._session else "06082003"
         record = PackIdScanRecord(
             date=self._mfg_date_for_serial(serial_number),
-            time=now.strftime("%I:%M:%S %p").lstrip("0"), # removes leading 0's
+            time=now.strftime("%I:%M:%S %p"),
             serial_number=serial_number,
             variant=self.variant_var.get(),
             pack_qr_data=pack_qr_data,
@@ -254,6 +256,10 @@ class BatteryPackIdGUI:
             append_pack_id_scan_record(record, excel_password=pw)
         except Exception:
             pass
+        try:
+            send_pack_id_scan(record)
+        except requests.exceptions.RequestException as e:
+                print("Request failed:", e, parent=self.root)
 
     def _reset_fields(self) -> None:
         self.scanner_var.set("")

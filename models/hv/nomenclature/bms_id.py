@@ -6,7 +6,7 @@
   VQ150720- → BMB ID 
   VQ150710- → CMB ID 
 """
-from __future__ import annotations
+ 
 
 import re
 from dataclasses import dataclass

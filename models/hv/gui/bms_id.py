@@ -1,9 +1,9 @@
-from __future__ import annotations
-
 import tkinter as tk
 from datetime import datetime
 from tkinter import messagebox, ttk
+import requests
 
+from api.Client import send_bms_rework, send_bms_scan
 from models.hv.gui.layout import DISPLAY_FONT, FIELD_FONT, FIELD_IPADY, LABEL_FONT   #, HEADING_FONT
 from models.hv.gui.print_actions import dispatch_zpl
 from models.hv.gui.scan_history import open_scan_history
@@ -207,6 +207,10 @@ class BmsIdGUI:
         if not ok:
             messagebox.showwarning("Rework", "Dummy Pack id not found in scan history.", parent=self.root)
             return
+        try:
+            send_bms_rework(self._pack_qr_raw, kind, full_raw_id)
+        except requests.exceptions.RequestException as e:
+                print("Request failed:", e, parent=self.root)
 
         if kind == "BMB":
             self.rework_bmb_var.set(full_raw_id)
@@ -250,7 +254,7 @@ class BmsIdGUI:
         now = datetime.now()
         record = BmsScanRecord(
             date=self._pack_date,
-            time=now.strftime("%I:%M:%S %p").lstrip("0"),
+            time=now.strftime("%I:%M:%S %p"),
             pack_qr_data=pack_qr,
             bmb_id=self._bmb_parsed.raw,   # FULL ID in the scan log
             cmb_id=self._cmb_parsed.raw,
@@ -260,6 +264,10 @@ class BmsIdGUI:
             append_scan_record(record, excel_password=excel_pw)
         except Exception:
             pass
+        try:
+            send_bms_scan(record)
+        except requests.exceptions.RequestException as e:
+                print("Request failed:", e, parent=self.root)
 
         self.root.after(_RESET_DELAY_MS, self._reset_display)
 

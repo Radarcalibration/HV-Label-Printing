@@ -1,4 +1,4 @@
-from __future__ import annotations
+ 
 
 VARIANT_OPTIONS = ["12P", "16P", "24P", "27P"] #33p and 48p are low voltage type, 8p and 10p are shockwave type.
 

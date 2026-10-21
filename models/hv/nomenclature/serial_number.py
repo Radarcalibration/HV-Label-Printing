@@ -1,4 +1,4 @@
-from __future__ import annotations
+ 
 
 from common.nomenclature.serial_number import (
     CELL_MFR_BY_CODE_NEW,

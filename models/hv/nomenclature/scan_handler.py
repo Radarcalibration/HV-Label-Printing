@@ -1,5 +1,5 @@
-from __future__ import annotations
-"""Pack serial QR format: VX156060:ABA51202605281U00111  
+ 
+"""Pack serial QR format: VX156060:ABA51202605281U00108  
 """
 
 import re

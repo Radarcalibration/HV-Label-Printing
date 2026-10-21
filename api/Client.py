@@ -1,48 +1,96 @@
+import sys
+from typing import TYPE_CHECKING
+
 import requests
-from datetime import datetime
 
-# ================== EDIT THESE VALUES ==================
-API_URL = "http://10.0.42.86:8001/data"
+if TYPE_CHECKING:
+    from models.hv.session.bms_scan_log import BmsScanRecord
+    from models.hv.session.pack_id_scan_log import PackIdScanRecord
+    from models.hv.session.scan_log import ScanRecord
 
-LINE_NUMBER        = "L01"
-PROCESS_CODE       = "P100"
-PROCESS_NAME       = "Assembly"
-MACHINE_NUMBER     = "M05"
-MACHINE_NAME       = "Press Machine"
-PART_SERIAL_NUMBER = "SN000000001"
-STATUS             = "OK"        # e.g. OK / NG / RUNNING / STOPPED
-
-# Leave as None to use the current date/time automatically
-DATE = None                      # format: "2026-10-21"
-TIME = None                      # format: "14:30:00"
-# =======================================================
+API_DUMMY_URL = "http://10.0.42.86:8001/data/dummy"
+API_PACK_ID_URL = "http://10.0.42.86:8001/data/packid"
+API_BMB_CMB_URL = "http://10.0.42.86:8001/data/bmbcmb"
 
 
-def send_data():
-    now = datetime.now()
-    payload = {
-        "date": DATE or now.strftime("%Y-%m-%d"),
-        "time": TIME or now.strftime("%H:%M:%S"),
-        "line_number": LINE_NUMBER,
-        "process_code": PROCESS_CODE,
-        "process_name": PROCESS_NAME,
-        "machine_number": MACHINE_NUMBER,
-        "machine_name": MACHINE_NAME,
-        "part_serial_number": PART_SERIAL_NUMBER,
-        "status": STATUS,
-    }
-
+def _post(url: str, payload: dict[str, str]) -> None:
     try:
-        response = requests.post(API_URL, json=payload, timeout=10, verify=False)
+        response = requests.post(url, json=payload, timeout=10)
         response.raise_for_status()
-        print("Status code:", response.status_code)
-        print("Response:", response.json())
     except requests.exceptions.RequestException as e:
         print("Request failed:", e)
 
 
+def _patch(url: str, payload: dict[str, str]) -> None:
+    try:
+        response = requests.patch(url, json=payload, timeout=10)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print("Request failed:", e)
+
+
+def send_dummy_scan(record: ScanRecord) -> None:
+    _post(
+        API_DUMMY_URL,
+        {
+            "date": record.date,
+            "time": record.time,
+            "serial_count": record.serial_count,
+            "serial_number": record.serial_number,
+            "ref_no": record.ref_no,
+            "variant": record.variant,
+            "m1": record.m1,
+            "m2": record.m2,
+            "m3": record.m3,
+            "m4": record.m4,
+            "dummy_pack_status": record.dummy_pack_status,
+            "dummy_pack_qr": record.dummy_pack_qr,
+            "issue_desc_1": record.issue_desc_1,
+            "issue_desc_2": record.issue_desc_2,
+            "action_plan": record.action_plan,
+            "remark": record.remark,
+            "admin_ack": record.admin_ack,
+        },
+    )
+
+
+def send_pack_id_scan(record: PackIdScanRecord) -> None:
+    _post(
+        API_PACK_ID_URL,
+        {
+            "date": record.date,
+            "time": record.time,
+            "serial_number": record.serial_number,
+            "variant": record.variant,
+            "pack_qr_data": record.pack_qr_data,
+        },
+    )
+
+
+def send_bms_scan(record: BmsScanRecord) -> None:
+    _post(
+        API_BMB_CMB_URL,
+        {
+            "date": record.date,
+            "time": record.time,
+            "pack_qr_data": record.pack_qr_data,
+            "bmb_id": record.bmb_id,
+            "cmb_id": record.cmb_id,
+            "rework_bmb_id": record.rework_bmb_id,
+            "rework_cmb_id": record.rework_cmb_id,
+        },
+    )
+
+
+def send_bms_rework(pack_qr_data: str, kind: str, value: str) -> None:
+    _patch(
+        API_BMB_CMB_URL,
+        {"pack_qr_data": pack_qr_data, "kind": kind, "value": value},
+    )
+
+
 if __name__ == "__main__":
-    send_data()
-
-
-# python client.py
+    try:
+        print("Scan log API:")
+    except requests.exceptions.RequestException as e:
+            print("Request failed:", e)
