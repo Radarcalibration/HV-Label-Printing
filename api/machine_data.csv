@@ -1,0 +1,3 @@
+date,time,line_number,process_code,process_name,machine_number,machine_name,part_serial_number,status
+2026-10-21,13:26:51,L01,P100,Assembly,M05,Press Machine,SN000000001,OK
+2026-10-21,13:31:08,L01,P100,Assembly,M05,Press Machine,SN000000001,OK
