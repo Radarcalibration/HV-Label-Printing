@@ -1,4 +1,3 @@
-import sys
 from typing import TYPE_CHECKING
 
 import requests
@@ -91,6 +90,6 @@ def send_bms_rework(pack_qr_data: str, kind: str, value: str) -> None:
 
 if __name__ == "__main__":
     try:
-        print("Scan log API:")
+        print("Succeed")
     except requests.exceptions.RequestException as e:
             print("Request failed:", e)

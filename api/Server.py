@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 app = FastAPI(title="Machine Data API")
 
-LOG_DIR = Path(__file__).resolve().parent
+LOG_DIR = Path(__file__).resolve().parent # this file's folder
 
 
 DUMMY_COLUMNS = [
@@ -89,7 +89,7 @@ def _read_rows(file_name: str, columns: list[str]) -> list[dict[str, str]]:
     path = LOG_DIR / file_name
     with LOG_LOCK:
         if not path.exists():
-            return "file not exist"
+            return []
         try:
             with path.open("r", newline="", encoding="utf-8") as f:
                 reader = csv.DictReader(f)
@@ -99,9 +99,13 @@ def _read_rows(file_name: str, columns: list[str]) -> list[dict[str, str]]:
                         detail=f"Unexpected CSV headers in {file_name}",
                     )
                 return list(reader)
-        except OSError as exc:
-            raise HTTPException(status_code=500, detail=f"Could not read {file_name}: {exc}") from exc
+        except OSError as e:
+            raise HTTPException(status_code=500, detail=f"Could not read {file_name}: {e}") from e
 
+
+def _resequence_rows(rows: list[dict[str, str]]) -> None:
+    for index, row in enumerate(rows, start=1):
+        row["Sl.No"] = str(index)
 
 def _append_row(
     file_name: str,
@@ -112,28 +116,34 @@ def _append_row(
     with LOG_LOCK:
         try:
             LOG_DIR.mkdir(parents=True, exist_ok=True)
-            file_exists = path.exists() and path.stat().st_size > 0
-            next_serial_number = 1
-            if file_exists:
+            existing_rows = []
+            if path.exists() and path.stat().st_size > 0:
                 with path.open("r", newline="", encoding="utf-8") as csv_file:
-                    reader = csv.reader(csv_file)
-                    if next(reader, []) != columns:
-                        raise HTTPException(
-                            status_code=500,
-                            detail=f"Unexpected CSV headers in {file_name}",
-                        )
-                    next_serial_number += sum(1 for _ in reader)
-            row = {"Sl.No": str(next_serial_number), **values}
+                    reader = csv.DictReader(csv_file)
+                    if reader.fieldnames != columns:
+                        raise HTTPException(status_code=500,detail=f"Unexpected CSV headers in {file_name}",)
+                    existing_rows = list(reader)
+                # Resequence existing rows
+                for index, row in enumerate(existing_rows, start=1):
+                    row["Sl.No"] = str(index)
+                # Rewrite file with corrected serial numbers
+                with path.open("w", newline="", encoding="utf-8") as csv_file:
+                    writer = csv.DictWriter(csv_file, fieldnames=columns)
+                    writer.writeheader()
+                    writer.writerows(existing_rows)
+            next_serial_number = len(existing_rows) + 1
+            row = {"Sl.No": str(next_serial_number),**values,}
             with path.open("a", newline="", encoding="utf-8") as csv_file:
                 writer = csv.DictWriter(csv_file, fieldnames=columns)
-                if not file_exists:
+                if path.stat().st_size == 0:
                     writer.writeheader()
                 writer.writerow(row)
             return row
         except HTTPException:
             raise
-        except OSError as exc:
-            raise HTTPException(status_code=500, detail=f"Could not write {file_name}: {exc}") from exc
+        except OSError as e:
+            raise HTTPException(status_code=500,detail=f"Could not write {file_name}: {e}",) from e
+
 
 
 def _update_bms_rework(item: BmsRework) -> dict[str, str]:
@@ -167,8 +177,8 @@ def _update_bms_rework(item: BmsRework) -> dict[str, str]:
             return row
         except HTTPException:
             raise
-        except OSError as exc:
-            raise HTTPException(status_code=500, detail=f"Could not update BMS CSV: {exc}") from exc
+        except OSError as e:
+            raise HTTPException(status_code=500, detail=f"Could not update BMS CSV: {e}") from e
 
 
 @app.get("/data/dummy")
