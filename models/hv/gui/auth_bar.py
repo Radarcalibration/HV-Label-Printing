@@ -70,7 +70,6 @@ class AuthBar(ttk.Frame):
             open_admin_settings(
                 self.winfo_toplevel(),
                 current_user=self.session.username,
-                excel_password=self.session.excel_password,
             )
 
     def _handle_login(self, username: str, password: str, role: str) -> None:

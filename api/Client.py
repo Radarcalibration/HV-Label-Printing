@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING
+from urllib.parse import urlsplit
 
 import requests
 
@@ -7,9 +8,36 @@ if TYPE_CHECKING:
     from models.hv.session.pack_id_scan_log import PackIdScanRecord
     from models.hv.session.scan_log import ScanRecord
 
-API_DUMMY_URL = "http://10.0.42.86:8001/data/dummy"
-API_PACK_ID_URL = "http://10.0.42.86:8001/data/packid"
-API_BMB_CMB_URL = "http://10.0.42.86:8001/data/bmbcmb"
+_API_URLS = {
+    "dummy_api_url": "",
+    "pack_id_api_url": "",
+    "bms_api_url": "",
+}
+
+
+def get_api_urls() -> dict[str, str]:
+    return _API_URLS.copy()
+
+
+def save_api_urls(dummy_url: str, pack_id_url: str, bms_url: str) -> None:
+    _API_URLS.update(
+        dummy_api_url=dummy_url.strip(),
+        pack_id_api_url=pack_id_url.strip(),
+        bms_api_url=bms_url.strip(),
+    )
+
+
+def is_valid_api_url(value: str) -> bool:
+    try:
+        parsed = urlsplit(value.strip())
+        return (
+            parsed.scheme in {"http", "https"}
+            and bool(parsed.hostname)
+            and not any(character.isspace() for character in value)
+            # and (parsed.port is None or 1 <= parsed.port <= 65535)
+        )
+    except ValueError:
+        return False
 
 
 def _post(url: str, payload: dict[str, str]) -> None:
@@ -30,7 +58,7 @@ def _patch(url: str, payload: dict[str, str]) -> None:
 
 def send_dummy_scan(record: ScanRecord) -> None:
     _post(
-        API_DUMMY_URL,
+        get_api_urls()["dummy_api_url"],
         {
             "date": record.date,
             "time": record.time,
@@ -55,7 +83,7 @@ def send_dummy_scan(record: ScanRecord) -> None:
 
 def send_pack_id_scan(record: PackIdScanRecord) -> None:
     _post(
-        API_PACK_ID_URL,
+        get_api_urls()["pack_id_api_url"],
         {
             "date": record.date,
             "time": record.time,
@@ -68,7 +96,7 @@ def send_pack_id_scan(record: PackIdScanRecord) -> None:
 
 def send_bms_scan(record: BmsScanRecord) -> None:
     _post(
-        API_BMB_CMB_URL,
+        get_api_urls()["bms_api_url"],
         {
             "date": record.date,
             "time": record.time,
@@ -80,10 +108,9 @@ def send_bms_scan(record: BmsScanRecord) -> None:
         },
     )
 
-
 def send_bms_rework(pack_qr_data: str, kind: str, value: str) -> None:
     _patch(
-        API_BMB_CMB_URL,
+        get_api_urls()["bms_api_url"],
         {"pack_qr_data": pack_qr_data, "kind": kind, "value": value},
     )
 

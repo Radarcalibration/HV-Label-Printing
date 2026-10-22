@@ -44,10 +44,10 @@ def main() -> None:
         sys.exit(1)
 
     root.title("HV Label Printer — ULTRAVIOLETTE AUTOMATIVE")
-    # root.geometry("1280x860")
-    # root.minsize(1000, 600)
-    root.resizable(False,False)
-    root.state("zoomed")
+    root.geometry("1280x860")
+    root.minsize(1000, 600)
+    # root.resizable(False,False)
+    # root.state("zoomed")
 
     icon_path = ASSETS_DIR / "logo.ico"
     if icon_path.exists():

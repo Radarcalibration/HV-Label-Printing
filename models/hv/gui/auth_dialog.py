@@ -68,11 +68,11 @@ class LoginDialog(_CenteredDialog):
         self.destroy()
 
 
-class ManageUsersDialog(_CenteredDialog):
+class ManageUsersFrame(ttk.Frame):
 
     def __init__(self, parent: tk.Misc, current_user: str) -> None:
+        super().__init__(parent)
         self.current_user = current_user
-        super().__init__(parent, "Manage Users")
 
         frame = ttk.Frame(self, padding=20)
         frame.pack(fill=tk.BOTH, expand=True)
@@ -115,11 +115,9 @@ class ManageUsersDialog(_CenteredDialog):
 
         buttons = ttk.Frame(frame)
         buttons.grid(row=9, column=0, columnspan=2, sticky=tk.E, pady=(16, 0))
-        ttk.Button(buttons, text="Close", command=self.destroy).pack(side=tk.LEFT, padx=(0, 8))
         ttk.Button(buttons, text="Add User", command=self._on_add).pack(side=tk.LEFT)
 
         frame.columnconfigure(1, weight=1)
-        self._center_over_parent(parent)
 
     def _refresh_users(self) -> None:
         self.users_listbox.delete(0, tk.END)
