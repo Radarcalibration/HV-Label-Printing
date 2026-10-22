@@ -29,7 +29,7 @@ _SUB_PATTERN = re.compile(
     r"(?P<serial>\d{4})$"
 )
 # VX156600-D1611105J260303
-# VQ156610-E2A1116J26009759 (new format) why this not accepting?
+# VQ156610-E2A1116J26009759
 _FULL_PATTERN = re.compile(
     r"^(?P<part_number>V[QX][0-9]{6})-(?P<sub>[C-F][1-3][1-6][123ABC][123][123]\d{2}[A-L]\d{2}\d{4})$"
 )
