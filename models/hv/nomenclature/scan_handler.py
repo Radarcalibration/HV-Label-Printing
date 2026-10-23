@@ -1,6 +1,5 @@
  
-"""Pack serial QR format: VX156060:ABA51202605281U00124
-"""
+"""Pack serial QR format: VX156060:ABA51202605281U00134 """
 
 import re
 from dataclasses import dataclass

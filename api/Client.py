@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 from urllib.parse import urlsplit
+from tkinter import messagebox
 
 import requests
 
@@ -67,7 +68,6 @@ def save_api_keys(dummy_key: str, pack_id_key: str, bms_key: str) -> None:
         pack_id_api_key=pack_id_key.strip(),
         bms_api_key=bms_key.strip(),
     )
-    print(_API_KEYS)
 
 
 def is_valid_api_url(value: str) -> bool:
@@ -132,7 +132,8 @@ def _patch(url: str, api_key: str, payload: dict[str, str]) -> None:
 
 def send_dummy_scan(record: ScanRecord) -> None:
     if not _API_CALL_ENABLED["dummy"]:
-        return
+        messagebox.showwarning("api warning", "this data is not appended in server side")
+        return 
     _post(
         get_api_urls()["dummy_api_url"],
         get_api_keys()["dummy_api_key"],
@@ -160,6 +161,7 @@ def send_dummy_scan(record: ScanRecord) -> None:
 
 def send_pack_id_scan(record: PackIdScanRecord) -> None:
     if not _API_CALL_ENABLED["pack_id"]:
+        messagebox.showwarning("api warning", "this data is not appended in server side")
         return
     _post(
         get_api_urls()["pack_id_api_url"],
@@ -176,6 +178,7 @@ def send_pack_id_scan(record: PackIdScanRecord) -> None:
 
 def send_bms_scan(record: BmsScanRecord) -> None:
     if not _API_CALL_ENABLED["bms"]:
+        messagebox.showwarning("api warning", "this data is not appended in server side")
         return
     _post(
         get_api_urls()["bms_api_url"],
@@ -193,6 +196,7 @@ def send_bms_scan(record: BmsScanRecord) -> None:
 
 def send_bms_rework(pack_qr_data: str, kind: str, value: str) -> None:
     if not _API_CALL_ENABLED["bms"]:
+        messagebox.showwarning("api warning", "this data is not appended in server side")
         return
     _patch(
         get_api_urls()["bms_api_url"],
