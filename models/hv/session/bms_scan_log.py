@@ -20,6 +20,7 @@ PROTECT_SHEET = False
 COLUMNS = [
     "Sl.No", "Date", "Time", "Pack QR Data",
     "BMB ID", "CMB ID", "Rework BMB ID", "Rework CMB ID",
+    "Machine Name", "Machine ID",
 ]
 
 HEADER_FILL = PatternFill("solid", fgColor="1F3864")
@@ -36,6 +37,8 @@ COL_WIDTHS = {
     "CMB ID":         26,
     "Rework BMB ID":  26,
     "Rework CMB ID":  26,
+    "Machine Name":   22,
+    "Machine ID":     18,
 }
 
 LEFT_ALIGN_COLS = {"Pack QR Data", "BMB ID", "CMB ID", "Rework BMB ID", "Rework CMB ID"}
@@ -50,6 +53,8 @@ class BmsScanRecord:
     cmb_id: str        = ""
     rework_bmb_id: str = ""
     rework_cmb_id: str = ""
+    machine_name: str  = ""
+    machine_id: str    = ""
 
     @property
     def is_reworked(self) -> bool:
@@ -59,6 +64,7 @@ class BmsScanRecord:
         return [
             sl_no, self.date, self.time, self.pack_qr_data,
             self.bmb_id, self.cmb_id, self.rework_bmb_id, self.rework_cmb_id,
+            self.machine_name, self.machine_id,
         ]
 
 
@@ -111,7 +117,27 @@ def _ensure_workbook(excel_password: str) -> openpyxl.Workbook:
     if LOG_FILE.exists():
         try:
             wb = openpyxl.load_workbook(LOG_FILE)
-            _get_sheet(wb, excel_password)
+            ws = _get_sheet(wb, excel_password)
+            existing_headers = {
+                str(ws.cell(row=1, column=i).value or "").strip()
+                for i in range(1, ws.max_column + 1)
+            }
+            for col_name in COLUMNS:
+                if col_name in existing_headers:
+                    continue
+                col_idx = ws.max_column + 1
+                cell = ws.cell(row=1, column=col_idx, value=col_name)
+                cell.font = HEADER_FONT
+                cell.fill = HEADER_FILL
+                cell.alignment = Alignment(
+                    horizontal="center", vertical="center", wrap_text=True
+                )
+                ws.column_dimensions[get_column_letter(col_idx)].width = COL_WIDTHS.get(
+                    col_name, 18
+                )
+                ws.row_dimensions[1].height = 28
+            _ensure_writable(LOG_FILE)
+            wb.save(LOG_FILE)
             return wb
         except Exception:
             pass
@@ -204,6 +230,7 @@ def load_all_records_with_rows() -> list[tuple[int, BmsScanRecord]]:
             records.append((row_idx, BmsScanRecord(
                 date=v[1], time=v[2], pack_qr_data=v[3],
                 bmb_id=v[4], cmb_id=v[5], rework_bmb_id=v[6], rework_cmb_id=v[7],
+                machine_name=v[8], machine_id=v[9],
             )))
         wb.close()
         return records

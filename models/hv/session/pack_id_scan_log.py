@@ -17,7 +17,10 @@ SHEET_NAME = "Pack ID"
 
 PROTECT_SHEET = False
 
-COLUMNS = ["Sl.No", "Date", "Time", "Serial Number", "Variant", "Pack QR Data"]
+COLUMNS = [
+    "Sl.No", "Date", "Time", "Serial Number", "Variant", "Pack QR Data",
+    "Machine Name", "Machine ID",
+]
 
 HEADER_FILL = PatternFill("solid", fgColor="1F3864")
 HEADER_FONT = Font(name="Segoe UI", bold=True, color="FFFFFF", size=10)
@@ -31,6 +34,8 @@ COL_WIDTHS = {
     "Serial Number": 22,
     "Variant":       12,
     "Pack QR Data":  40,
+    "Machine Name":  22,
+    "Machine ID":    18,
 }
 
 LEFT_ALIGN_COLS = {"Serial Number", "Pack QR Data"}
@@ -43,9 +48,14 @@ class PackIdScanRecord:
     serial_number: str = ""
     variant: str        = ""
     pack_qr_data: str  = ""
+    machine_name: str  = ""
+    machine_id: str   = ""
 
     def as_row(self, sl_no: int) -> list:
-        return [sl_no, self.date, self.time, self.serial_number, self.variant, self.pack_qr_data]
+        return [
+            sl_no, self.date, self.time, self.serial_number, self.variant,
+            self.pack_qr_data, self.machine_name, self.machine_id,
+        ]
 
 
 def _ensure_writable(path: Path) -> None:
@@ -74,7 +84,7 @@ def _protection(password: str, enabled: bool = True) -> SheetProtection:
 
 
 def _build_header(ws, excel_password: str) -> None:
-    for col_idx, col_name in enumerate(COLUMNS, start=1):
+    for col_name in COLUMNS:
         cell = ws.cell(row=1, column=col_idx, value=col_name)
         cell.font = HEADER_FONT
         cell.fill = HEADER_FILL
@@ -97,7 +107,27 @@ def _ensure_workbook(excel_password: str) -> openpyxl.Workbook:
     if LOG_FILE.exists():
         try:
             wb = openpyxl.load_workbook(LOG_FILE)
-            _get_sheet(wb, excel_password)
+            ws = _get_sheet(wb, excel_password)
+            existing_headers = {
+                str(ws.cell(row=1, column=i).value or "").strip()
+                for i in range(1, ws.max_column + 1)
+            }
+            for col_idx, col_name in enumerate(COLUMNS, start=1):
+                if col_name in existing_headers:
+                    continue
+                col_idx = ws.max_column + 1
+                cell = ws.cell(row=1, column=col_idx, value=col_name)
+                cell.font = HEADER_FONT
+                cell.fill = HEADER_FILL
+                cell.alignment = Alignment(
+                    horizontal="center", vertical="center", wrap_text=True
+                )
+                ws.column_dimensions[get_column_letter(col_idx)].width = COL_WIDTHS.get(
+                    col_name, 18
+                )
+                ws.row_dimensions[1].height = 28
+            _ensure_writable(LOG_FILE)
+            wb.save(LOG_FILE)
             return wb
         except Exception:
             pass
@@ -150,6 +180,7 @@ def load_all_records() -> list[PackIdScanRecord]:
                 v.append("")
             records.append(PackIdScanRecord(
                 date=v[1], time=v[2], serial_number=v[3], variant=v[4], pack_qr_data=v[5],
+                machine_name=v[6], machine_id=v[7],
             ))
         wb.close()
         return records

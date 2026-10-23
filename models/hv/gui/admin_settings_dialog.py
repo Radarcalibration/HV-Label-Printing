@@ -12,6 +12,7 @@ from api.Client import (
     is_valid_api_url,
     save_api_keys,
     save_api_urls,
+    save_machine_details,
     set_api_call_enabled,
     get_machine_details,
     validate_api_key,
@@ -72,18 +73,25 @@ class AdminSettingsDialog(tk.Toplevel):
         self._machine_name = tk.StringVar(value=machine["machine_name"])
         self._machine_id = tk.StringVar(value=machine["machine_id"])
         
+        ttk.Label(form).grid(row=4, column=0, sticky=tk.W, padx=(0, 10), pady=6)
+        ttk.Label(form).grid(row=5, column=0, sticky=tk.W, padx=(0, 10), pady=6)
+        ttk.Label(form).grid(row=6, column=0, sticky=tk.W, padx=(0, 10), pady=6)
+        ttk.Label(form).grid(row=7, column=0, sticky=tk.W, padx=(0, 10), pady=6)
+        ttk.Label(form).grid(row=8, column=0, sticky=tk.W, padx=(0, 10), pady=6)
+        ttk.Label(form).grid(row=9, column=0, sticky=tk.W, padx=(0, 10), pady=6)
+        
         ttk.Label(form, text="Machine Name:").grid(
-                    row=4, column=0, sticky=tk.W, padx=(0, 10), pady=6
+                    row=5, column=0, sticky=tk.W, padx=(0, 10), pady=6
                 )
         ttk.Entry(form, textvariable=self._machine_name).grid(
-            row=4, column=1, sticky=tk.EW, pady=6
+            row=5, column=1, sticky=tk.EW, pady=6
         )
         
         ttk.Label(form, text="Machine ID:").grid(
-            row=4, column=2, sticky=tk.W, padx=(0, 10), pady=6
+            row=5, column=2, sticky=tk.W, padx=(0, 10), pady=6
         )
-        ttk.Entry(form, textvariable=self._machine_name).grid(
-            row=4, column=3, sticky=tk.EW, pady=6
+        ttk.Entry(form, textvariable=self._machine_id).grid(
+            row=5, column=3, sticky=tk.EW, pady=6
         )
         
         ttk.Label(form, text="Dummy API URL:").grid(
@@ -145,14 +153,31 @@ class AdminSettingsDialog(tk.Toplevel):
         ).grid(row=2, column=4, sticky=tk.W, padx=(10, 0), pady=6)
 
         form.columnconfigure(3, weight=1)
-        ttk.Button(form, text="Save API URLs", command=self.save_api_urls_button).grid(
-            row=3, column=1, sticky=tk.E, pady=(10, 0)
+
+        ttk.Button(form, text="Save", command=self.save_all_settings).grid(
+            row=10, column=4, sticky=tk.E, pady=(10, 0)
         )
 
-        ttk.Button(form, text="Save API Keys", command=self.save_api_keys_button).grid(
-            row=3, column=3, sticky=tk.E, pady=(10, 0)
-        )
+    
+    def save_all_settings(self):
+        self.save_api_urls_button()
+        self.save_api_keys_button()
+        self.save_machine_details_button()
 
+    def save_machine_details_button(self) -> None:
+        try:
+            save_machine_details(self._machine_name.get(), self._machine_id.get())
+        except Exception as exc:
+            messagebox.showerror(
+                "Save error", f"Could not save machine details:\n{exc}", parent=self
+            )
+            return
+        messagebox.showinfo(
+            "Machine details saved",
+            "Machine name and ID have been updated.",
+            parent=self,
+        )
+                
     def _save_api_call_setting(self, endpoint: str) -> None:
         set_api_call_enabled(endpoint, self._api_call_vars[endpoint].get())
 

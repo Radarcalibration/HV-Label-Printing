@@ -3,7 +3,7 @@ from datetime import datetime
 from tkinter import messagebox, ttk
 import requests
 
-from api.Client import send_bms_rework, send_bms_scan
+from api.Client import get_machine_details, send_bms_rework, send_bms_scan
 from models.hv.gui.layout import DISPLAY_FONT, FIELD_FONT, FIELD_IPADY, LABEL_FONT   #, HEADING_FONT
 from models.hv.gui.print_actions import dispatch_zpl
 from models.hv.gui.scan_history import open_scan_history
@@ -252,12 +252,15 @@ class BmsIdGUI:
         )
 
         now = datetime.now()
+        machine = get_machine_details()
         record = BmsScanRecord(
             date=self._pack_date,
             time=now.strftime("%I:%M:%S %p"),
             pack_qr_data=pack_qr,
             bmb_id=self._bmb_parsed.raw,   # FULL ID in the scan log
             cmb_id=self._cmb_parsed.raw,
+            machine_name=machine["machine_name"],
+            machine_id=machine["machine_id"],
         )
         try:
             excel_pw = self._session.excel_password if self._session else "06082003"

@@ -54,6 +54,13 @@ def get_machine_details() -> dict[str, str]:
     return _machine_details.copy()
 
 
+def save_machine_details(machine_name: str, machine_id: str) -> None:
+    _machine_details.update(
+        machine_name=machine_name.strip(),
+        machine_id=machine_id.strip(),
+    )
+
+
 def save_api_urls(dummy_url: str, pack_id_url: str, bms_url: str) -> None:
     _API_URLS.update(
         dummy_api_url=dummy_url.strip(),
@@ -155,6 +162,8 @@ def send_dummy_scan(record: ScanRecord) -> None:
             "action_plan": record.action_plan,
             "remark": record.remark,
             "admin_ack": record.admin_ack,
+            "machine_name": record.machine_name,
+            "machine_id": record.machine_id,
         },
     )
 
@@ -172,6 +181,8 @@ def send_pack_id_scan(record: PackIdScanRecord) -> None:
             "serial_number": record.serial_number,
             "variant": record.variant,
             "pack_qr_data": record.pack_qr_data,
+            "machine_name": record.machine_name,
+            "machine_id": record.machine_id,
         },
     )
 
@@ -191,6 +202,8 @@ def send_bms_scan(record: BmsScanRecord) -> None:
             "cmb_id": record.cmb_id,
             "rework_bmb_id": record.rework_bmb_id,
             "rework_cmb_id": record.rework_cmb_id,
+            "machine_name": record.machine_name,
+            "machine_id": record.machine_id,
         },
     )
 

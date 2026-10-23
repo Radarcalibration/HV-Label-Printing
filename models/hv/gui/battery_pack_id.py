@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 import requests
 
-from api.Client import send_pack_id_scan
+from api.Client import get_machine_details, send_pack_id_scan
 from models.hv.gui.battery_parameters import build_battery_parameters_panel, set_battery_parameters
 from models.hv.gui.category_controls import add_category_field, bind_category_variant
 from models.hv.gui.constants import VARIANT_OPTIONS, VARIANT_PARAMS, format_pack_qr_data, get_type_of_reess #,get_emark,
@@ -244,6 +244,7 @@ class BatteryPackIdGUI:
         )
     
         now = datetime.now()
+        machine = get_machine_details()
         pw = self._session.excel_password if hasattr(self, "_session") and self._session else "06082003"
         record = PackIdScanRecord(
             date=self._mfg_date_for_serial(serial_number),
@@ -251,6 +252,8 @@ class BatteryPackIdGUI:
             serial_number=serial_number,
             variant=self.variant_var.get(),
             pack_qr_data=pack_qr_data,
+            machine_name=machine["machine_name"],
+            machine_id=machine["machine_id"],
         )
         try:
             append_pack_id_scan_record(record, excel_password=pw)

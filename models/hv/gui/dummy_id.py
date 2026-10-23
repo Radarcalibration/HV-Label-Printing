@@ -3,7 +3,7 @@ from datetime import datetime
 from tkinter import messagebox, ttk
 import requests
 
-from api.Client import send_dummy_scan
+from api.Client import get_machine_details, send_dummy_scan
 from models.hv.gui.battery_parameters import build_battery_parameters_panel, set_battery_parameters
 from models.hv.gui.constants import (
     VARIANT_OPTIONS,
@@ -238,6 +238,7 @@ class DummyIdGUI:
         save_pack_serial(serial)
 
         now = datetime.now()
+        machine = get_machine_details()
         record = ScanRecord(
             date=mfg_date,
             time=now.strftime("%I:%M:%S %p"),
@@ -251,6 +252,8 @@ class DummyIdGUI:
             dummy_pack_status=INTEGRATION_STATUS_TEXT,
             dummy_pack_qr=pack_qr,
             serial_number=serial,
+            machine_name=machine["machine_name"],
+            machine_id=machine["machine_id"],
         )
         try:
             excel_pw = self._session.excel_password if self._session else "06082003"

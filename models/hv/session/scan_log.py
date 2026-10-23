@@ -52,6 +52,8 @@ COLUMNS = [
     "Action Plan",
     "Remark",
     "Admin Acknowledgement",
+    "Machine Name",
+    "Machine ID",
 ]
 
 HEADER_FILL = PatternFill("solid", fgColor="1F3864")
@@ -61,8 +63,8 @@ ALT_FILL    = PatternFill("solid", fgColor="EEF2F7")
 
 COL_WIDTHS = {
     "Sl.No":                    7,
-    "Date":                    13,
-    "Time":                    12,
+    "Date":                    22,
+    "Time":                    18,
     "Serial Count":            12,
     "Ref No":                  12,
     "Variant":                 12,
@@ -78,6 +80,8 @@ COL_WIDTHS = {
     "Action Plan":             30,
     "Remark":                  20,
     "Admin Acknowledgement":   30,
+    "Machine Name":            22,
+    "Machine ID":              18,
 }
 
 LEFT_ALIGN_COLS = {
@@ -117,6 +121,8 @@ class ScanRecord:
     action_plan: str        = ""
     remark: str             = ""
     admin_ack: str          = ""
+    machine_name: str       = ""
+    machine_id: str         = ""
 
     @property
     def has_issue(self) -> bool:
@@ -146,6 +152,8 @@ class ScanRecord:
             self.action_plan,
             self.remark,
             self.admin_ack,
+            self.machine_name,
+            self.machine_id,
         ]
 
 
@@ -301,6 +309,8 @@ def load_all_records_with_rows() -> list[tuple[int, ScanRecord]]:
                 action_plan=v[15],
                 remark=v[16],
                 admin_ack=v[17],
+                machine_name=v[18],
+                machine_id=v[19],
             )))
         wb.close()
         return records
