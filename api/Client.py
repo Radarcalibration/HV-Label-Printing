@@ -14,9 +14,43 @@ _API_URLS = {
     "bms_api_url": "",
 }
 
+_API_KEYS = {
+    "dummy_api_key": "",
+    "pack_id_api_key": "",
+    "bms_api_key": "",
+}
+
+_API_CALL_ENABLED = {
+    "dummy": True,
+    "pack_id": True,
+    "bms": True,
+}
+
+_machine_details = {
+    "machine_name": "",
+    "machine_id": "",
+}
 
 def get_api_urls() -> dict[str, str]:
     return _API_URLS.copy()
+
+
+def get_api_keys() -> dict[str, str]:
+    return _API_KEYS.copy()
+
+
+def get_api_call_settings() -> dict[str, bool]:
+    return _API_CALL_ENABLED.copy()
+
+
+def set_api_call_enabled(endpoint: str, enabled: bool) -> None:
+    if endpoint not in _API_CALL_ENABLED:
+        raise ValueError(f"Unknown API endpoint: {endpoint}")
+    _API_CALL_ENABLED[endpoint] = enabled
+
+
+def get_machine_details() -> dict[str, str]:
+    return _machine_details.copy()
 
 
 def save_api_urls(dummy_url: str, pack_id_url: str, bms_url: str) -> None:
@@ -27,6 +61,15 @@ def save_api_urls(dummy_url: str, pack_id_url: str, bms_url: str) -> None:
     )
 
 
+def save_api_keys(dummy_key: str, pack_id_key: str, bms_key: str) -> None:
+    _API_KEYS.update(
+        dummy_api_key=dummy_key.strip(),
+        pack_id_api_key=pack_id_key.strip(),
+        bms_api_key=bms_key.strip(),
+    )
+    print(_API_KEYS)
+
+
 def is_valid_api_url(value: str) -> bool:
     try:
         parsed = urlsplit(value.strip())
@@ -34,31 +77,65 @@ def is_valid_api_url(value: str) -> bool:
             parsed.scheme in {"http", "https"}
             and bool(parsed.hostname)
             and not any(character.isspace() for character in value)
-            # and (parsed.port is None or 1 <= parsed.port <= 65535)
+            and (parsed.port is None or 1 <= parsed.port <= 65535)
         )
     except ValueError:
         return False
 
 
-def _post(url: str, payload: dict[str, str]) -> None:
+def is_valid_api_key(value: str) -> bool:
+    return bool(value.strip())
+
+
+def validate_api_key(url: str, api_key: str) -> bool:
+    response = requests.get(
+        url,
+        headers={"X-API-Key": api_key},
+        timeout=10,
+        allow_redirects=False,
+    )
+    if response.status_code in {401, 403}:
+        return False
+    if response.is_redirect:
+        raise requests.exceptions.RequestException(
+            "The API endpoint redirected instead of validating the key."
+        )
+    response.raise_for_status()
+    return True
+
+
+def _post(url: str, api_key: str, payload: dict[str, str]) -> None:
     try:
-        response = requests.post(url, json=payload, timeout=10)
+        response = requests.post(
+            url,
+            headers={"X-API-Key": api_key},
+            json=payload,
+            timeout=10,
+        )
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
         print("Request failed:", e)
 
 
-def _patch(url: str, payload: dict[str, str]) -> None:
+def _patch(url: str, api_key: str, payload: dict[str, str]) -> None:
     try:
-        response = requests.patch(url, json=payload, timeout=10)
+        response = requests.patch(
+            url,
+            headers={"X-API-Key": api_key},
+            json=payload,
+            timeout=10,
+        )
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
         print("Request failed:", e)
 
 
 def send_dummy_scan(record: ScanRecord) -> None:
+    if not _API_CALL_ENABLED["dummy"]:
+        return
     _post(
         get_api_urls()["dummy_api_url"],
+        get_api_keys()["dummy_api_key"],
         {
             "date": record.date,
             "time": record.time,
@@ -82,8 +159,11 @@ def send_dummy_scan(record: ScanRecord) -> None:
 
 
 def send_pack_id_scan(record: PackIdScanRecord) -> None:
+    if not _API_CALL_ENABLED["pack_id"]:
+        return
     _post(
         get_api_urls()["pack_id_api_url"],
+        get_api_keys()["pack_id_api_key"],
         {
             "date": record.date,
             "time": record.time,
@@ -95,8 +175,11 @@ def send_pack_id_scan(record: PackIdScanRecord) -> None:
 
 
 def send_bms_scan(record: BmsScanRecord) -> None:
+    if not _API_CALL_ENABLED["bms"]:
+        return
     _post(
         get_api_urls()["bms_api_url"],
+        get_api_keys()["bms_api_key"],
         {
             "date": record.date,
             "time": record.time,
@@ -109,8 +192,11 @@ def send_bms_scan(record: BmsScanRecord) -> None:
     )
 
 def send_bms_rework(pack_qr_data: str, kind: str, value: str) -> None:
+    if not _API_CALL_ENABLED["bms"]:
+        return
     _patch(
         get_api_urls()["bms_api_url"],
+        get_api_keys()["bms_api_key"],
         {"pack_qr_data": pack_qr_data, "kind": kind, "value": value},
     )
 

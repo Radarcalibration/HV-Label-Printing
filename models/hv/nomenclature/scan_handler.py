@@ -1,5 +1,5 @@
  
-"""Pack serial QR format: VX156060:ABA51202605281U00101
+"""Pack serial QR format: VX156060:ABA51202605281U00124
 """
 
 import re
