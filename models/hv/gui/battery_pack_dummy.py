@@ -3,7 +3,7 @@ from datetime import datetime
 from tkinter import messagebox, ttk
 import requests
 
-from api.Client import send_dummy_scan
+from api.Client import send_dummy_scan, get_machine_details
 from models.hv.gui.battery_parameters import build_battery_parameters_panel, set_battery_parameters
 from models.hv.gui.category_controls import add_category_field, bind_category_variant
 from models.hv.gui.constants import (
@@ -649,6 +649,7 @@ class BatteryPackDummyGUI:
         serial_count = _parsed.serial_count if _parsed else ""
         
         now = datetime.now()
+        machine = get_machine_details()
         mfg_time = now.strftime("%I:%M:%S %p")
         
         category = self.vars["category"].get().strip().lower()
@@ -675,6 +676,8 @@ class BatteryPackDummyGUI:
             dummy_pack_status=dummy_status,
             dummy_pack_qr=pack_qr,
             serial_number=serial,
+            machine_name=machine["machine_name"],
+            machine_id=machine["machine_id"],
         )
 
         excel_pw = self._session.excel_password if self._session else "06082003"
