@@ -5,13 +5,14 @@ import requests
 
 from api.Client import get_machine_details, send_bms_scan
 from models.hv.gui.layout import DISPLAY_FONT, FIELD_FONT, FIELD_IPADY, LABEL_FONT   #, HEADING_FONT
+from models.hv.gui.log_recovery import show_log_recovery_dialog
 from models.hv.gui.print_actions import dispatch_zpl
 from models.hv.gui.scan_history import open_scan_history
 from models.hv.gui.scanner import setup_hardware_scanner
 from models.hv.nomenclature.bms_id import short_bmb_cmb_id
 from models.hv.nomenclature.scan_handler import ScanType, identify_scan
 from models.hv.printing.constants import PRINTER_BMS_ID
-from models.hv.printing.labels import build_bmb_cmb_combined_label
+from models.hv.printing.labels import build_hv_bms_id_label
 from models.hv.session.bms_scan_log import (
     BmsScanRecord,
     append_scan_record,
@@ -211,21 +212,33 @@ class BmsIdGUI:
             excel_pw = self._session.excel_password if self._session else "06082003"
             append_scan_record(record, excel_password=excel_pw)
         except Exception as exc:
-            messagebox.showerror("Rework", f"Could not save rework record:\n{exc}", parent=self.root)
+            show_log_recovery_dialog(
+                self.root,
+                exc,
+                retry_save=lambda: append_scan_record(record, excel_password=excel_pw),
+                on_saved=lambda: self._finish_rework(record, effective_bmb_raw, effective_cmb_raw, status),
+                on_continue=lambda: self._finish_rework(record, effective_bmb_raw, effective_cmb_raw, status),
+                title="Rework Log Error",
+            )
             return
+        self._finish_rework(record, effective_bmb_raw, effective_cmb_raw, status)
+
+    def _finish_rework(
+        self, record: BmsScanRecord, bmb_raw: str, cmb_raw: str, status: str
+    ) -> None:
         try:
             send_bms_scan(record)
         except requests.exceptions.RequestException as exc:
             messagebox.showerror("Rework", f"Could not send rework record to server:\n{exc}", parent=self.root)
 
-        zpl = build_bmb_cmb_combined_label(
-            bmb_serial=short_bmb_cmb_id(effective_bmb_raw),
-            cmb_serial=short_bmb_cmb_id(effective_cmb_raw),
+        zpl = build_hv_bms_id_label(
+            bmb_serial=short_bmb_cmb_id(bmb_raw),
+            cmb_serial=short_bmb_cmb_id(cmb_raw),
             pack_qr_data=self._pack_qr_raw,
         )
         dispatch_zpl(
             self.root, zpl, self.print_var.get(),
-            default_name=f"{status.lower().replace(' ', '_')}_{short_bmb_cmb_id(effective_bmb_raw)}.zpl",
+            default_name=f"{status.lower().replace(' ', '_')}_{short_bmb_cmb_id(bmb_raw)}.zpl",
             printer_name=PRINTER_BMS_ID,
         )
         self.root.after(_RESET_DELAY_MS, self._reset_display)
@@ -246,7 +259,7 @@ class BmsIdGUI:
             return
 
         pack_qr = self._pack_qr_raw
-        zpl = build_bmb_cmb_combined_label(
+        zpl = build_hv_bms_id_label(
             bmb_serial=self._bmb_parsed.short_id,
             cmb_serial=self._cmb_parsed.short_id,
             pack_qr_data=pack_qr,
@@ -272,8 +285,19 @@ class BmsIdGUI:
         try:
             excel_pw = self._session.excel_password if self._session else "06082003"
             append_scan_record(record, excel_password=excel_pw)
-        except Exception:
-            pass
+        except Exception as exc:
+            try:
+                send_bms_scan(record)
+            except requests.exceptions.RequestException as api_exc:
+                print("Request failed:", api_exc, parent=self.root)
+            show_log_recovery_dialog(
+                self.root,
+                exc,
+                retry_save=lambda: append_scan_record(record, excel_password=excel_pw),
+                on_saved=lambda: self.root.after(_RESET_DELAY_MS, self._reset_display),
+                on_continue=lambda: self.root.after(_RESET_DELAY_MS, self._reset_display),
+            )
+            return
         try:
             send_bms_scan(record)
         except requests.exceptions.RequestException as e:

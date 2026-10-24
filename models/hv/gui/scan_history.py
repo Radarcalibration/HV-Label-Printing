@@ -7,7 +7,11 @@ from tkinter import messagebox, ttk
 from models.hv.gui.constants import VARIANT_OPTIONS
 from models.hv.gui.print_actions import dispatch_zpl
 from models.hv.printing.constants import PRINTER_PACK_ID, PRINTER_DUMMY
-from models.hv.printing.labels import build_battery_pack_id_label, build_bmb_cmb_combined_label, build_pack_qr_label
+from models.hv.printing.labels import (
+    build_hv_bms_id_label,
+    build_hv_dummy_id_label,
+    build_hv_pack_id_label,
+)
 
 # Three separate logs, one per screen — see session/scan_log.py,
 # session/pack_id_scan_log.py, session/bms_scan_log.py.
@@ -224,19 +228,16 @@ class ScanHistoryDialog(tk.Toplevel):
             return
         cell_mfr = scan.cell_mfr or ""
         params = VARIANT_PARAMS.get(variant, VARIANT_PARAMS[VARIANT_OPTIONS[-1]])
-        model_number = get_type_of_reess(variant, cell_mfr)
+        category = scan.serial.category.capitalize()
 
-        
-        category = "Domestic"
-
-        zpl = build_pack_qr_label(
+        zpl = build_hv_dummy_id_label(
             pack_qr_data=rec.dummy_pack_qr,
-            model_number=model_number,
-            serial_number=rec.serial_number,
+            serial_number=rec.serial_number or scan.serial.raw,
             tac_number=params["tac_number"],
             mfg_date=rec.date,
             variant=variant,
             category=category,
+            cell_mfr=cell_mfr,
         )
         dispatch_zpl(self, zpl, self._print_mode, default_name=f"reprint_dummy_{idx+1}.zpl", printer_name=PRINTER_DUMMY)
         self._status_var.set(f"Reprinted (Dummy Pack QR) row {idx + 1}")
@@ -258,11 +259,11 @@ class ScanHistoryDialog(tk.Toplevel):
         cell_mfr = result.cell_mfr or ""
         serial_number = rec.serial_number or result.serial.raw
         
-        category = "Domestic"
+        category = result.serial.category.capitalize()
         params = VARIANT_PARAMS.get(variant, VARIANT_PARAMS[VARIANT_OPTIONS[-1]])
         model_number = get_type_of_reess(variant, cell_mfr)
 
-        zpl = build_battery_pack_id_label(
+        zpl = build_hv_pack_id_label(
             serial_number=serial_number,
             rated_capacity=params["rated_capacity"],
             max_voltage=params["max_voltage"],
@@ -286,7 +287,7 @@ class ScanHistoryDialog(tk.Toplevel):
             return
 
         from models.hv.nomenclature.bms_id import short_bmb_cmb_id
-        zpl = build_bmb_cmb_combined_label(
+        zpl = build_hv_bms_id_label(
             bmb_serial=short_bmb_cmb_id(effective_bmb),
             cmb_serial=short_bmb_cmb_id(effective_cmb),
             pack_qr_data=rec.pack_qr_data,

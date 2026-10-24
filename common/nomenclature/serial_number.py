@@ -127,7 +127,10 @@ def build_serial_number(
     if category_key not in CATEGORY_CODES_NEW:
         raise ValueError(f"Unsupported category: {category}")
 
-    count = re.sub(r"\D", "", serial_count or "").zfill(5)[-5:]
+    count_digits = re.sub(r"\D", "", serial_count or "")
+    if count_digits and int(count_digits) > 99999:
+        raise ValueError("Serial count cannot exceed 99999.")
+    count = count_digits.zfill(5)
 
     return (
         f"{NEW_PLANT_CODES[plant_key]}"

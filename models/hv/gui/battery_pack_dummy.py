@@ -25,7 +25,7 @@ from models.hv.nomenclature.scan_handler import ScanType, identify_scan
 from models.hv.printing.constants import PRINTER_DUMMY
 from common.auth.session import Session
 from models.hv.gui.scan_history import open_scan_history 
-from models.hv.printing.labels import build_pack_qr_label
+from models.hv.printing.labels import build_hv_dummy_id_label
 from models.hv.session.pack_store import (
     increment_pack_serial,
     load_pack_serial,
@@ -546,10 +546,6 @@ class BatteryPackDummyGUI:
         def _on_skip() -> None:
             _continue_to_print()
             
-        def _on_exit() -> None:
-            messagebox.showwarning("warning", "you cannot cancel now")
-            return
-
         btn_row = ttk.Frame(frame)
         btn_row.grid(row=len(fields) + 2, column=0, columnspan=2, sticky=tk.E, pady=(12, 0))
         ttk.Button(btn_row, text="Skip", command=_on_skip, width=8).pack(side=tk.LEFT, padx=(0, 8))
@@ -557,7 +553,7 @@ class BatteryPackDummyGUI:
 
         frame.columnconfigure(1, weight=1)
         popup.bind("<Return>", lambda _e: _on_ok())
-        popup.protocol("WM_DELETE_WINDOW", _on_exit())
+        popup.protocol("WM_DELETE_WINDOW", lambda: None)
 
         # Centre over main window
         popup.update_idletasks()
@@ -571,7 +567,6 @@ class BatteryPackDummyGUI:
         serial = self.serial_number_var.get().strip()
         pack_qr = self.pack_qr_var.get().strip()
         params = VARIANT_PARAMS.get(variant, VARIANT_PARAMS[VARIANT_OPTIONS[-1]])
-        model_number = get_type_of_reess(variant, cell_mfr)
 
         _parsed = parse_serial_number(serial)
         mfg_date = _parsed.format_date() if _parsed else ""
@@ -621,9 +616,8 @@ class BatteryPackDummyGUI:
         except requests.exceptions.RequestException as e:
                 print("Request failed:", e, parent=self.root)
 
-        zpl = build_pack_qr_label(
+        zpl = build_hv_dummy_id_label(
             pack_qr_data=pack_qr,
-            model_number=model_number,
             serial_number=serial,
             tac_number=params["tac_number"],
             mfg_date=mfg_date,
@@ -634,7 +628,11 @@ class BatteryPackDummyGUI:
         dispatch_zpl(self.root, zpl, self.print_var.get(), default_name=f"pack_{serial}.zpl", printer_name=PRINTER_DUMMY)
 
         if log_saved:
-            increment_pack_serial() # increament serial count after successful print and log save
+            try:
+                increment_pack_serial()
+            except ValueError as exc:
+                messagebox.showerror("Serial Count Limit", str(exc), parent=self.root)
+                return
             self.root.after(_RESET_DELAY_MS, self._auto_reset) # resets essential fields after 1s
         else: # for log save faild
             for module_var in self._module_vars:

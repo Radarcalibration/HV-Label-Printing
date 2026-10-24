@@ -154,7 +154,10 @@ def increment_pack_serial() -> str:
     if parsed is None:
         return current
 
-    new_count = str(int(parsed.serial_count) + 1).zfill(5)
+    next_count = int(parsed.serial_count) + 1
+    if next_count > 99999:
+        raise ValueError("Serial count has reached the maximum value of 99999.")
+    new_count = str(next_count).zfill(5)
 
     new_serial = build_serial_number(
         plant=parsed.plant,

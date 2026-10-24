@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from models.hv.gui.constants import BATTERY_PARAM_ROWS
-from models.hv.gui.layout import FIELD_FONT, HEADING_FONT, LABEL_FONT, VALUE_FONT, configure_styles
+from models.hv.gui.layout import HEADING_FONT, LABEL_FONT, VALUE_FONT, configure_styles
 
 
 def build_battery_parameters_panel(
@@ -31,7 +31,7 @@ def build_battery_parameters_panel(
     serial_number_var = tk.StringVar()
     serial_number_entry: ttk.Entry | None = None
 
-    for label_text, key, editable in BATTERY_PARAM_ROWS:
+    for label_text, key, _editable in BATTERY_PARAM_ROWS:
         row = ttk.Frame(params_frame)
         row.pack(fill=tk.X, pady=row_pady)
         row.columnconfigure(1, weight=1)
@@ -42,27 +42,15 @@ def build_battery_parameters_panel(
             row=0, column=0, sticky=tk.W, padx=(0, 12)
         )
 
-        # if editable:
-        #     if plain_labels:
-        #         widget = ttk.Label(
-        #             row,
-        #             textvariable=serial_number_var,
-        #             font=FIELD_FONT,
-        #             anchor=tk.W,
-        #         )
-        #         widget.grid(row=0, column=1, sticky="ew")
-        #         serial_number_entry = None
-        #     else:
-        #         widget = ttk.Entry(
-        #             row,
-        #             textvariable=serial_number_var,
-        #             font=FIELD_FONT,
-        #             style="Plain.TEntry",
-        #         )
-        #         widget.grid(row=0, column=1, sticky="ew", ipady=2)
-        #         serial_number_entry = widget
-        # else:
-        value_label = ttk.Label(
+        if key == "serial_number":
+            value_label = ttk.Label(
+                row,
+                textvariable=serial_number_var,
+                anchor=tk.W,
+                font=VALUE_FONT,
+            )
+        else:
+            value_label = ttk.Label(
                 row,
                 text="",
                 anchor=tk.W,

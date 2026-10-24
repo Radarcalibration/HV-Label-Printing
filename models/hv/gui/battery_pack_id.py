@@ -7,6 +7,7 @@ from models.hv.gui.battery_parameters import build_battery_parameters_panel, set
 from models.hv.gui.category_controls import add_category_field, bind_category_variant
 from models.hv.gui.constants import VARIANT_OPTIONS, VARIANT_PARAMS, format_pack_qr_data, get_type_of_reess
 from models.hv.gui.layout import FIELD_FONT, FIELD_IPADY, HEADING_FONT, LABEL_FONT, configure_equal_columns
+from models.hv.gui.log_recovery import show_log_recovery_dialog
 from models.hv.gui.permissions import set_combobox_enabled
 from models.hv.gui.print_actions import dispatch_zpl
 from models.hv.gui.scan_history import open_scan_history
@@ -14,7 +15,7 @@ from models.hv.gui.scanner import setup_hardware_scanner
 from models.hv.nomenclature.scan_handler import ScanType, identify_scan
 from models.hv.nomenclature.serial_number import parse_serial_number
 from models.hv.printing.constants import PRINTER_PACK_ID
-from models.hv.printing.labels import build_battery_pack_id_label
+from models.hv.printing.labels import build_hv_pack_id_label
 from datetime import datetime
 
 from models.hv.session.pack_store import save_pack_serial
@@ -217,7 +218,7 @@ class BatteryPackIdGUI:
         if serial_number:
             save_pack_serial(serial_number)
 
-    def _print_label(self, serial_number: str) -> None:
+    def _print_label(self, serial_number: str) -> bool:
         category = self.category_var.get()
 
         pack_qr_data = format_pack_qr_data(
@@ -226,7 +227,7 @@ class BatteryPackIdGUI:
             cell_mfr=self.cell_mfr_var.get(),
         )
 
-        zpl = build_battery_pack_id_label(
+        zpl = build_hv_pack_id_label(
             serial_number=serial_number,
             rated_capacity=self._param_value("rated_capacity"),
             max_voltage=self._param_value("max_voltage"),
@@ -261,12 +262,24 @@ class BatteryPackIdGUI:
         )
         try:
             append_pack_id_scan_record(record, excel_password=pw)
-        except Exception:
-            pass
+        except Exception as exc:
+            try:
+                send_pack_id_scan(record)
+            except requests.exceptions.RequestException as api_exc:
+                print("Request failed:", api_exc, parent=self.root)
+            show_log_recovery_dialog(
+                self.root,
+                exc,
+                retry_save=lambda: append_pack_id_scan_record(record, excel_password=pw),
+                on_saved=lambda: self.root.after(1000, self._reset_fields),
+                on_continue=lambda: self.root.after(1000, self._reset_fields),
+            )
+            return False
         try:
             send_pack_id_scan(record)
         except requests.exceptions.RequestException as e:
                 print("Request failed:", e, parent=self.root)
+        return True
 
     def _reset_fields(self) -> None:
         self.scanner_var.set("")
@@ -294,6 +307,7 @@ class BatteryPackIdGUI:
             self.scanner_var.set("")  
             self.serial_number_var.set(result.serial.raw)
             self.cell_mfr_var.set(result.cell_mfr)
+            self.category_var.set(result.serial.category.capitalize())
             
             if result.pack_variant:
                 self.variant_var.set(result.pack_variant)
@@ -301,8 +315,8 @@ class BatteryPackIdGUI:
             self._on_variant_change()
 
             # Auto-print the label, then reset fields after a brief preview delay
-            self._print_label(result.serial.raw)
-            self.root.after(1000, self._reset_fields)
+            if self._print_label(result.serial.raw):
+                self.root.after(1000, self._reset_fields)
             return
 
         if result.scan_type == ScanType.MODULE_ID:

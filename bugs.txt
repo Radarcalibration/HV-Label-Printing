@@ -1,0 +1,44 @@
+# Project bug findings
+
+## High
+
+1. **Export pack labels may be printed as Domestic — resolved**
+   - Battery Pack ID now sets category from the serial's encoded category code.
+   - Dummy ID and Pack ID history reprints now use the parsed serial category.
+   - Dummy ID and Pack ID labels show manufacturing year for Export and manufacturing date for Domestic.
+
+2. **API configuration and post errors are process-local — accepted for now**
+   - `api/Client.py`: API URLs, keys, enabled flags, and machine details reset on restart; failed posts are printed to the console.
+   - Keep settings in memory only. Console output is sufficient for API failures at this time.
+
+## Medium
+
+3. **Pack Details close button — resolved**
+   - The window-manager close action is disabled; operators use OK or Skip.
+
+4. **Serial counter maximum — resolved**
+   - Serial construction rejects counts above `99999`; incrementing beyond the maximum raises a `ValueError` shown to the operator instead of wrapping.
+
+5. **Pack-ID and BMS Excel write failures — resolved**
+   - Excel append failures now show the error and retain scanned values until the operator retries the log save or acknowledges and continues.
+   - For flows that already printed, retry only writes the record and never repeats the label. Rework uses the same recovery actions and completes its single print only after operator resolution.
+   - The serial number is now visible in the Battery Parameters panel, including the Battery Pack Dummy ID GUI.
+
+6. **HV label builders and Export date/year — resolved**
+   - Added dedicated HV Dummy ID, HV Pack ID, and HV BMS builders in `models/hv/printing/labels.py` and `models/hv/printing/zpl.py`.
+   - The Dummy ID and Pack ID builders use manufacturing year for Export and manufacturing date for Domestic. The legacy HV pack export branch now passes the required template arguments.
+   - The Shockwave sticker dimension reference remains in `zpl.py`.
+
+## Low
+
+7. **Standalone Dummy ID launch — resolved**
+   - Added `run()` and use it for standalone launch.
+
+8. **Streamlit launch instructions — not applicable**
+   - Streamlit is not required; removed the unsupported launch instructions from the README.
+
+## Validation notes
+
+- Project Python sources compile successfully.
+- Focused checks cover Domestic/Export label content, all three dedicated label builders, serial overflow rejection, and the HV export branch.
+- No automated test suite was found.

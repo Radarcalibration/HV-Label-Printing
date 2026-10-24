@@ -17,7 +17,7 @@ from models.hv.gui.scan_history import open_scan_history
 from models.hv.gui.scanner import setup_hardware_scanner
 from models.hv.nomenclature.scan_handler import ScanType, identify_scan
 from models.hv.printing.constants import PRINTER_DUMMY
-from models.hv.printing.labels import build_pack_qr_label
+from models.hv.printing.labels import build_hv_dummy_id_label
 from models.hv.session.pack_store import save_pack_serial
 from models.hv.session.scan_log import ScanRecord, append_scan_record
 
@@ -202,9 +202,8 @@ class DummyIdGUI:
         )
         self.serial_number_var.set(serial)
 
-        zpl = build_pack_qr_label(
+        zpl = build_hv_dummy_id_label(
             pack_qr_data=pack_qr,
-            model_number=model_number,
             serial_number=serial,
             tac_number=params["tac_number"],
             mfg_date=mfg_date,
@@ -256,10 +255,13 @@ class DummyIdGUI:
     def _open_history(self) -> None:
         open_scan_history(self.root, print_mode=self.print_var.get(), origin="dummy")
 
+    def run(self) -> None:
+        self.root.mainloop()
+
 
 def open_dummy_id(parent: tk.Tk | tk.Toplevel | None = None) -> DummyIdGUI:
     return DummyIdGUI(parent)
 
 
 if __name__ == "__main__":
-    DummyIdGUI().mainloop()
+    DummyIdGUI().run()

@@ -359,6 +359,9 @@ Functions:
 - `_reess_for_pack_qr()`: resolves REESS data while building a pack QR label.
 - `build_hv_module_label()`: creates the label for a module scan.
 - `build_hv_pack_label()`: creates a pack label for the main HV flow.
+- `build_hv_dummy_id_label()`: creates a Dummy ID label using the encoded category for date/year output.
+- `build_hv_pack_id_label()`: creates a Pack ID label using the encoded category for date/year output.
+- `build_hv_bms_id_label()`: creates the combined BMB/CMB label for the BMS screen.
 - `build_pack_qr_label()`: builds a pack QR label using serial, model, and date data.
 - `build_bmb_cmb_combined_label()`: builds the combined BMB/CMB label used in the BMS screen.
 - `build_bmb_cmb_label()`: builds a simpler BMB/CMB label when needed.
