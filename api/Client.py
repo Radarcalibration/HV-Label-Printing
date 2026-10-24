@@ -124,19 +124,6 @@ def _post(url: str, api_key: str, payload: dict[str, str]) -> None:
         print("Request failed:", e)
 
 
-def _patch(url: str, api_key: str, payload: dict[str, str]) -> None:
-    try:
-        response = requests.patch(
-            url,
-            headers={"X-API-Key": api_key},
-            json=payload,
-            timeout=10,
-        )
-        response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        print("Request failed:", e)
-
-
 def send_dummy_scan(record: ScanRecord) -> None:
     if not _API_CALL_ENABLED["dummy"]:
         messagebox.showwarning("api warning", "this data is not appended in server side")
@@ -200,21 +187,10 @@ def send_bms_scan(record: BmsScanRecord) -> None:
             "pack_qr_data": record.pack_qr_data,
             "bmb_id": record.bmb_id,
             "cmb_id": record.cmb_id,
-            "rework_bmb_id": record.rework_bmb_id,
-            "rework_cmb_id": record.rework_cmb_id,
+            "status": record.status,
             "machine_name": record.machine_name,
             "machine_id": record.machine_id,
         },
-    )
-
-def send_bms_rework(pack_qr_data: str, kind: str, value: str) -> None:
-    if not _API_CALL_ENABLED["bms"]:
-        messagebox.showwarning("api warning", "this data is not appended in server side")
-        return
-    _patch(
-        get_api_urls()["bms_api_url"],
-        get_api_keys()["bms_api_key"],
-        {"pack_qr_data": pack_qr_data, "kind": kind, "value": value},
     )
 
 

@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 app = FastAPI(title="Machine Data API")
 
-_API_KEYS = {
+_API_KEYS = {                       # hard coded api keys in server side (client side api keys have to match with these to get access to write sometihng.)
     "dummy_api_key": "uvbmsdummy",
     "pack_id_api_key": "uvbmspackid",
     "bms_api_key": "uvbmsbmbcmb",
@@ -45,6 +45,10 @@ PACK_ID_COLUMNS = [
     "Machine Name", "Machine ID",
 ]
 BMS_COLUMNS = [
+    "Sl.No", "Date", "Time", "Pack QR Data", "BMB ID", "CMB ID",
+    "Status", "Machine Name", "Machine ID",
+]
+LEGACY_BMS_COLUMNS = [
     "Sl.No", "Date", "Time", "Pack QR Data", "BMB ID", "CMB ID",
     "Rework BMB ID", "Rework CMB ID", "Machine Name", "Machine ID",
 ]
@@ -90,17 +94,9 @@ class BmsScan(BaseModel):
     pack_qr_data: str = ""
     bmb_id: str = ""
     cmb_id: str = ""
-    rework_bmb_id: str = ""
-    rework_cmb_id: str = ""
+    status: str = "Original"
     machine_name: str = ""
     machine_id: str = ""
-
-
-class BmsRework(BaseModel):
-    pack_qr_data: str
-    kind: str
-    value: str
-
 
 def _read_rows(file_name: str, columns: list[str]) -> list[dict[str, str]]:
     path = LOG_DIR / file_name
@@ -128,6 +124,38 @@ def _ensure_csv_schema(path: Path, columns: list[str]) -> list[dict[str, str]]:
             existing_columns = reader.fieldnames or []
             if existing_columns == columns:
                 return list(reader)
+            if path.name == "bms_scan_log.csv" and existing_columns == LEGACY_BMS_COLUMNS:
+                rows = list(reader)
+                migrated_rows = []
+                for row in rows:
+                    rework_bmb = row.get("Rework BMB ID", "")
+                    rework_cmb = row.get("Rework CMB ID", "")
+                    original = {
+                        "Sl.No": row.get("Sl.No", ""),
+                        "Date": row.get("Date", ""),
+                        "Time": row.get("Time", ""),
+                        "Pack QR Data": row.get("Pack QR Data", ""),
+                        "BMB ID": row.get("BMB ID", ""),
+                        "CMB ID": row.get("CMB ID", ""),
+                        "Status": "Original",
+                        "Machine Name": row.get("Machine Name", ""),
+                        "Machine ID": row.get("Machine ID", ""),
+                    }
+                    migrated_rows.append(original)
+                    if rework_bmb or rework_cmb:
+                        migrated_rows.append({
+                            **original,
+                            "BMB ID": rework_bmb or original["BMB ID"],
+                            "CMB ID": rework_cmb or original["CMB ID"],
+                            "Status": "Rework 1",
+                        })
+                for index, row in enumerate(migrated_rows, start=1):
+                    row["Sl.No"] = str(index)
+                with path.open("w", newline="", encoding="utf-8") as csv_file:
+                    writer = csv.DictWriter(csv_file, fieldnames=columns)
+                    writer.writeheader()
+                    writer.writerows(migrated_rows)
+                return migrated_rows
             if existing_columns != columns[:len(existing_columns)]:
                 raise HTTPException(
                     status_code=500,
@@ -180,41 +208,6 @@ def _append_row(
         except OSError as e:
             raise HTTPException(status_code=500,detail=f"Could not write {file_name}: {e}",) from e
 
-
-
-def _update_bms_rework(item: BmsRework) -> dict[str, str]:
-    kind = item.kind.upper()
-    if kind not in {"BMB", "CMB"}:
-        raise HTTPException(status_code=422, detail="kind must be BMB or CMB")
-
-    path = LOG_DIR / "bms_scan_log.csv"
-    with LOG_LOCK:
-        if not path.exists():
-            raise HTTPException(status_code=404, detail="BMS scan log does not exist")
-        try:
-            with path.open("r", newline="", encoding="utf-8") as csv_file:
-                reader = csv.DictReader(csv_file)
-                if reader.fieldnames != BMS_COLUMNS:
-                    raise HTTPException(status_code=500, detail="Unexpected BMS CSV headers")
-                rows = list(reader)
-            target = item.pack_qr_data.strip()
-            for row in reversed(rows):
-                if row["Pack QR Data"].strip() == target:
-                    column = "Rework BMB ID" if kind == "BMB" else "Rework CMB ID"
-                    row[column] = item.value
-                    break
-            else:
-                raise HTTPException(status_code=404, detail="Pack QR Data not found")
-
-            with path.open("w", newline="", encoding="utf-8") as csv_file:
-                writer = csv.DictWriter(csv_file, fieldnames=BMS_COLUMNS)
-                writer.writeheader()
-                writer.writerows(rows)
-            return row
-        except HTTPException:
-            raise
-        except OSError as e:
-            raise HTTPException(status_code=500, detail=f"Could not update BMS CSV: {e}") from e
 
 
 @app.get("/data/dummy")
@@ -307,22 +300,12 @@ def receive_bms_scan(
             "Pack QR Data": item.pack_qr_data,
             "BMB ID": item.bmb_id,
             "CMB ID": item.cmb_id,
-            "Rework BMB ID": item.rework_bmb_id,
-            "Rework CMB ID": item.rework_cmb_id,
+            "Status": item.status,
             "Machine Name": item.machine_name,
             "Machine ID": item.machine_id,
         },
     )
     return {"message": "BMB/CMB scan saved", "data": row}
-
-
-@app.patch("/data/bmbcmb")
-def update_bms_rework(
-    item: BmsRework,
-    api_key: Optional[str] = Header(None, alias="X-API-Key"),
-) -> dict:
-    _require_api_key(api_key, "bms_api_key")
-    return {"message": "BMB/CMB rework updated", "data": _update_bms_rework(item)}
 
 
 # python -m uvicorn Server:app --host 0.0.0.0 --port 80

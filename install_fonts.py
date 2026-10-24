@@ -1,11 +1,8 @@
- 
-
 import ctypes
 import os
 import sys
 from ctypes import wintypes
 from pathlib import Path
-
 
 from models.hv.printing.spooler import DOCINFO1, PRINTER_PACK_ID, _resolve_printer_name
 
@@ -14,14 +11,14 @@ FONT_FILES = [
     (r"C:\Users\RadarCalibration\Downloads\Fonts\Fonts\BrutalType-Medium.ttf", "BRUTALTYPE-MEDIUM.TTF"),
 ]
 
-# Printer's E: memory (other memory locations also there. refer zebra Configuration)
+# Printer's E: memory (refer zebra Configurations for more info)
 DEST_DRIVE = "E"
 
 
 def _build_du_payload(font_bytes: bytes, printer_filename: str) -> bytes:
     
     name = Path(printer_filename).stem[:8].upper() # .stem removes file extension
-    ext = Path(printer_filename).suffix.lstrip(".").upper() or "TTF" #.TTF in this case
+    ext = Path(printer_filename).suffix.lstrip(".").upper() or "TTF" #petch file extension (caps)
     header = f"~DU{DEST_DRIVE}:{name}.{ext},{len(font_bytes)},".encode("ascii")
     return header + font_bytes # ~DUE:BRUTALTY.TTF,123456, followed by binary data
 
@@ -81,7 +78,7 @@ def send_zpl_bytes(payload: bytes, printer_name: str = PRINTER_PACK_ID) -> None:
 
 
 def main() -> None:
-    if os.name != "nt":
+    if os.name != "nt": # if not windows os (ex- linux)
         print("This script must be run on the Windows PC connected to the printer.")
         sys.exit(1)
 
@@ -104,5 +101,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main() 
-    """ python install_fonts.py """
+    main()
+    """run this file to get machine id"""

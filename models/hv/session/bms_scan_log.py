@@ -19,8 +19,7 @@ PROTECT_SHEET = False
 
 COLUMNS = [
     "Sl.No", "Date", "Time", "Pack QR Data",
-    "BMB ID", "CMB ID", "Rework BMB ID", "Rework CMB ID",
-    "Machine Name", "Machine ID",
+    "BMB ID", "CMB ID", "Status", "Machine Name", "Machine ID",
 ]
 
 HEADER_FILL = PatternFill("solid", fgColor="1F3864")
@@ -35,13 +34,13 @@ COL_WIDTHS = {
     "Pack QR Data":   40,
     "BMB ID":         26,
     "CMB ID":         26,
-    "Rework BMB ID":  26,
-    "Rework CMB ID":  26,
+    "Status":         14,
     "Machine Name":   22,
     "Machine ID":     18,
 }
 
-LEFT_ALIGN_COLS = {"Pack QR Data", "BMB ID", "CMB ID", "Rework BMB ID", "Rework CMB ID"}
+LEFT_ALIGN_COLS = {"Pack QR Data", "BMB ID", "CMB ID"}
+REWORK_FONT = Font(name="Segoe UI", size=10, color="FF0000FF")
 
 
 @dataclass
@@ -51,20 +50,15 @@ class BmsScanRecord:
     pack_qr_data: str  = ""
     bmb_id: str        = ""
     cmb_id: str        = ""
-    rework_bmb_id: str = ""
-    rework_cmb_id: str = ""
+    status: str        = "Original"
     machine_name: str  = ""
     machine_id: str    = ""
-
-    @property
-    def is_reworked(self) -> bool:
-        return bool(self.rework_bmb_id.strip() or self.rework_cmb_id.strip())
+    reworked_kind: str = ""
 
     def as_row(self, sl_no: int) -> list:
         return [
             sl_no, self.date, self.time, self.pack_qr_data,
-            self.bmb_id, self.cmb_id, self.rework_bmb_id, self.rework_cmb_id,
-            self.machine_name, self.machine_id,
+            self.bmb_id, self.cmb_id, self.status, self.machine_name, self.machine_id,
         ]
 
 
@@ -113,34 +107,94 @@ def _get_sheet(wb: openpyxl.Workbook, excel_password: str):
     return ws
 
 
+def _record_from_values(values: dict[str, str]) -> tuple[BmsScanRecord, str]:
+    legacy_bmb_rework = values.get("Rework BMB ID", "").strip()
+    legacy_cmb_rework = values.get("Rework CMB ID", "").strip()
+    reworked_kind = ""
+    if legacy_bmb_rework:
+        reworked_kind = "BMB"
+    if legacy_cmb_rework:
+        reworked_kind = "CMB" if not reworked_kind else "BOTH"
+
+    status = values.get("Status", "").strip()
+    if not status:
+        status = "Rework 1" if reworked_kind else "Original"
+
+    record = BmsScanRecord(
+        date=values.get("Date", ""),
+        time=values.get("Time", ""),
+        pack_qr_data=values.get("Pack QR Data", ""),
+        bmb_id=legacy_bmb_rework or values.get("BMB ID", ""),
+        cmb_id=legacy_cmb_rework or values.get("CMB ID", ""),
+        status=status,
+        machine_name=values.get("Machine Name", ""),
+        machine_id=values.get("Machine ID", ""),
+        reworked_kind=reworked_kind,
+    )
+    return record, reworked_kind
+
+
+def _write_data_row(ws, row_idx: int, record: BmsScanRecord, sl_no: int) -> None:
+    for col_idx, (col_name, value) in enumerate(zip(COLUMNS, record.as_row(sl_no)), start=1):
+        cell = ws.cell(row=row_idx, column=col_idx, value=value)
+        is_reworked_id = col_name in {"BMB ID", "CMB ID"} and (
+            record.reworked_kind == col_name.removesuffix(" ID")
+            or record.reworked_kind == "BOTH"
+        )
+        cell.font = REWORK_FONT if is_reworked_id else CELL_FONT
+        h_align = "left" if col_name in LEFT_ALIGN_COLS else "center"
+        cell.alignment = Alignment(horizontal=h_align, vertical="center", wrap_text=True)
+        if row_idx % 2 == 0:
+            cell.fill = ALT_FILL
+    ws.row_dimensions[row_idx].height = 18
+
+
 def _ensure_workbook(excel_password: str) -> openpyxl.Workbook:
     if LOG_FILE.exists():
-        try:
-            wb = openpyxl.load_workbook(LOG_FILE)
-            ws = _get_sheet(wb, excel_password)
-            existing_headers = {
-                str(ws.cell(row=1, column=i).value or "").strip()
-                for i in range(1, ws.max_column + 1)
-            }
-            for col_name in COLUMNS:
-                if col_name in existing_headers:
+        wb = openpyxl.load_workbook(LOG_FILE)
+        ws = _get_sheet(wb, excel_password)
+        existing_headers = [
+            str(ws.cell(row=1, column=i).value or "").strip()
+            for i in range(1, ws.max_column + 1)
+        ]
+        if existing_headers != COLUMNS:
+            old_headers = existing_headers
+            old_max_column = ws.max_column
+            migrated = []
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                values = {
+                    header: str(row[index] or "")
+                    for index, header in enumerate(old_headers)
+                    if index < len(row) and header
+                }
+                if not any(values.values()):
                     continue
-                col_idx = ws.max_column + 1
-                cell = ws.cell(row=1, column=col_idx, value=col_name)
-                cell.font = HEADER_FONT
-                cell.fill = HEADER_FILL
-                cell.alignment = Alignment(
-                    horizontal="center", vertical="center", wrap_text=True
-                )
-                ws.column_dimensions[get_column_letter(col_idx)].width = COL_WIDTHS.get(
-                    col_name, 18
-                )
-                ws.row_dimensions[1].height = 28
-            _ensure_writable(LOG_FILE)
-            wb.save(LOG_FILE)
-            return wb
-        except Exception:
-            pass
+                record, reworked_kind = _record_from_values(values)
+                if reworked_kind:
+                    migrated.append(BmsScanRecord(
+                        date=record.date,
+                        time=record.time,
+                        pack_qr_data=record.pack_qr_data,
+                        bmb_id=values.get("BMB ID", ""),
+                        cmb_id=values.get("CMB ID", ""),
+                        status="Original",
+                        machine_name=record.machine_name,
+                        machine_id=record.machine_id,
+                    ))
+                    record.status = values.get("Status", "").strip() or "Rework 1"
+                    migrated.append(record)
+                else:
+                    record.status = record.status or "Original"
+                    migrated.append(record)
+            ws.delete_rows(1, ws.max_row)
+            if old_max_column:
+                ws.delete_cols(1, old_max_column)
+            _build_header(ws, excel_password)
+            for index, record in enumerate(migrated, start=2):
+                _write_data_row(ws, index, record, index - 1)
+        _ensure_writable(LOG_FILE)
+        wb.save(LOG_FILE)
+        return wb
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = SHEET_NAME
@@ -150,62 +204,16 @@ def _ensure_workbook(excel_password: str) -> openpyxl.Workbook:
     return wb
 
 
-def _find_row_by_pack_qr(ws, pack_qr_data: str) -> int | None:
-    if not pack_qr_data:
-        return None
-    col = COLUMNS.index("Pack QR Data") + 1
-    target = pack_qr_data.strip()
-    for row_idx in range(ws.max_row, 1, -1):
-        if str(ws.cell(row=row_idx, column=col).value or "").strip() == target:
-            return row_idx
-    return None
-
-
 def append_scan_record(record: BmsScanRecord, *, excel_password: str = "06082003") -> None:
     wb = _ensure_workbook(excel_password)
     ws = _get_sheet(wb, excel_password)
     ws.protection = _protection(excel_password, enabled=False)
 
-    sl_no = ws.max_row
     row_idx = ws.max_row + 1
-    row_data = record.as_row(sl_no)
-    for col_idx, (col_name, value) in enumerate(zip(COLUMNS, row_data), start=1):
-        cell = ws.cell(row=row_idx, column=col_idx, value=value)
-        cell.font = CELL_FONT
-        h_align = "left" if col_name in LEFT_ALIGN_COLS else "center"
-        cell.alignment = Alignment(horizontal=h_align, vertical="center", wrap_text=True)
-        if row_idx % 2 == 0:
-            cell.fill = ALT_FILL
-
-    ws.row_dimensions[row_idx].height = 18
+    _write_data_row(ws, row_idx, record, row_idx - 1)
     ws.protection = _protection(excel_password, enabled=PROTECT_SHEET)
     _ensure_writable(LOG_FILE)
     wb.save(LOG_FILE)
-
-
-def patch_rework(
-    pack_qr_data: str, kind: str, value: str, *, excel_password: str = "06082003"
-) -> bool:
-    
-    if not pack_qr_data or not LOG_FILE.exists():
-        return False
-    wb = _ensure_workbook(excel_password)
-    ws = _get_sheet(wb, excel_password)
-    row = _find_row_by_pack_qr(ws, pack_qr_data)
-    if row is None:
-        wb.close()
-        return False
-    ws.protection = _protection(excel_password, enabled=False)
-    col_name = "Rework BMB ID" if kind.upper() == "BMB" else "Rework CMB ID"
-    col = COLUMNS.index(col_name) + 1
-    cell = ws.cell(row=row, column=col, value=value)
-    cell.font = CELL_FONT
-    cell.alignment = Alignment(horizontal="left", vertical="center")
-    ws.protection = _protection(excel_password, enabled=PROTECT_SHEET)
-    _ensure_writable(LOG_FILE)
-    wb.save(LOG_FILE)
-    return True
-
 
 def load_all_records() -> list[BmsScanRecord]:
     return [rec for _row, rec in load_all_records_with_rows()]
@@ -214,28 +222,28 @@ def load_all_records() -> list[BmsScanRecord]:
 def load_all_records_with_rows() -> list[tuple[int, BmsScanRecord]]:
     if not LOG_FILE.exists():
         return []
+    wb = openpyxl.load_workbook(LOG_FILE, data_only=True)
     try:
-        wb = openpyxl.load_workbook(LOG_FILE, data_only=True)
         if SHEET_NAME not in wb.sheetnames:
-            wb.close()
             return []
         ws = wb[SHEET_NAME]
+        headers = [
+            str(ws.cell(row=1, column=i).value or "").strip()
+            for i in range(1, ws.max_column + 1)
+        ]
         records: list[tuple[int, BmsScanRecord]] = []
         for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
             if not any(row):
                 continue
-            v = [str(c) if c is not None else "" for c in row]
-            while len(v) < len(COLUMNS):
-                v.append("")
-            records.append((row_idx, BmsScanRecord(
-                date=v[1], time=v[2], pack_qr_data=v[3],
-                bmb_id=v[4], cmb_id=v[5], rework_bmb_id=v[6], rework_cmb_id=v[7],
-                machine_name=v[8], machine_id=v[9],
-            )))
-        wb.close()
+            values = {
+                header: str(row[index] or "")
+                for index, header in enumerate(headers)
+                if index < len(row) and header
+            }
+            records.append((row_idx, _record_from_values(values)[0]))
         return records
-    except Exception:
-        return []
+    finally:
+        wb.close()
 
 
 def find_record_by_pack_qr(pack_qr_data: str) -> BmsScanRecord | None:
@@ -249,11 +257,8 @@ def find_record_by_pack_qr(pack_qr_data: str) -> BmsScanRecord | None:
     return None
 
 
-def load_rework_records() -> list[tuple[int, BmsScanRecord]]:
-    
-    return [(row, rec) for row, rec in load_all_records_with_rows() if rec.is_reworked]
-
-
 def open_log_file() -> None:
     if LOG_FILE.exists():
+        wb = _ensure_workbook("06082003")
+        wb.close()
         os.startfile(str(LOG_FILE))

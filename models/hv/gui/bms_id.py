@@ -3,7 +3,7 @@ from datetime import datetime
 from tkinter import messagebox, ttk
 import requests
 
-from api.Client import get_machine_details, send_bms_rework, send_bms_scan
+from api.Client import get_machine_details, send_bms_scan
 from models.hv.gui.layout import DISPLAY_FONT, FIELD_FONT, FIELD_IPADY, LABEL_FONT   #, HEADING_FONT
 from models.hv.gui.print_actions import dispatch_zpl
 from models.hv.gui.scan_history import open_scan_history
@@ -12,7 +12,12 @@ from models.hv.nomenclature.bms_id import short_bmb_cmb_id
 from models.hv.nomenclature.scan_handler import ScanType, identify_scan
 from models.hv.printing.constants import PRINTER_BMS_ID
 from models.hv.printing.labels import build_bmb_cmb_combined_label
-from models.hv.session.bms_scan_log import BmsScanRecord, append_scan_record, find_record_by_pack_qr, patch_rework
+from models.hv.session.bms_scan_log import (
+    BmsScanRecord,
+    append_scan_record,
+    find_record_by_pack_qr,
+    load_all_records,
+)
 
 _RESET_DELAY_MS = 1000
 
@@ -41,8 +46,6 @@ class BmsIdGUI:
         self.pack_qr_var = tk.StringVar()
         self.bmb_id_var = tk.StringVar()
         self.cmb_id_var = tk.StringVar()
-        self.rework_bmb_var = tk.StringVar()
-        self.rework_cmb_var = tk.StringVar()
         self.rework_mode_var = tk.StringVar(value="No")   # explicit rework toggle — default off
         self.scanner_var = tk.StringVar()
         self.print_var = tk.StringVar(value="print")
@@ -54,7 +57,6 @@ class BmsIdGUI:
         self._existing_record = None  # BmsScanRecord, when rework mode finds a match
 
         self._build_ui()
-        self._apply_rework_visibility()
 
     def _build_ui(self) -> None:
         container = ttk.Frame(self.host, padding=16)
@@ -71,12 +73,6 @@ class BmsIdGUI:
         ttk.Label(self._display_frame, textvariable=self.bmb_id_var, font=DISPLAY_FONT).grid(row=1, column=1, sticky=tk.W, pady=2)
         ttk.Label(self._display_frame, text="CMB ID:", font=LABEL_FONT).grid(row=2, column=0, sticky=tk.W, padx=(0, 10), pady=2)
         ttk.Label(self._display_frame, textvariable=self.cmb_id_var, font=DISPLAY_FONT).grid(row=2, column=1, sticky=tk.W, pady=2)
-
-        # Rework ID rows — only gridded (visible) when Rework = Yes.
-        self._rework_bmb_label = ttk.Label(self._display_frame, text="Rework BMB ID:", font=LABEL_FONT)
-        self._rework_bmb_value = ttk.Label(self._display_frame, textvariable=self.rework_bmb_var, font=DISPLAY_FONT, foreground="#b34700")
-        self._rework_cmb_label = ttk.Label(self._display_frame, text="Rework CMB ID:", font=LABEL_FONT)
-        self._rework_cmb_value = ttk.Label(self._display_frame, textvariable=self.rework_cmb_var, font=DISPLAY_FONT, foreground="#b34700")
 
         scan_frame = ttk.Frame(container)
         scan_frame.pack(fill=tk.X)
@@ -95,38 +91,27 @@ class BmsIdGUI:
         controls = ttk.Frame(row)
         controls.grid(row=0, column=1, sticky=tk.E, padx=(10, 0))
 
-        ttk.Label(controls, text="Rework", font=LABEL_FONT).pack(side=tk.LEFT, padx=(0, 4))
-        ttk.Combobox(
-            controls, textvariable=self.rework_mode_var, values=["Yes", "No" ],
-            state="readonly", width=8, justify="center",
-        ).pack(side=tk.LEFT, ipady=FIELD_IPADY, padx=(0, 8))
-        self.rework_mode_var.trace_add("write", lambda *_a: self._on_rework_toggle())
+        ttk.Checkbutton(
+            controls,
+            text="Rework",
+            variable=self.rework_mode_var,
+            onvalue="Yes",
+            offvalue="No",
+            command=self._on_rework_toggle,
+        ).pack(side=tk.LEFT, padx=(0, 8))
 
         ttk.Combobox(
             controls, textvariable=self.print_var, values=["print", "pdf"],
             state="readonly", width=8, justify="center",
         ).pack(side=tk.LEFT, ipady=FIELD_IPADY, padx=(0, 8))
-        ttk.Button(controls, text="History", command=self._open_history, width=10).pack(side=tk.LEFT, ipady=FIELD_IPADY, padx=(0, 8))
+        ttk.Button(controls, text="History", command=self._open_history, width=10).pack(side=tk.LEFT, padx=(0, 8))
 
     def _open_history(self) -> None:
         open_scan_history(self.root, print_mode=self.print_var.get(), origin="bmb_cmb")
 
     # ── Rework toggle 
     def _on_rework_toggle(self) -> None:
-        self._apply_rework_visibility()
         self._reset_display()
-
-    def _apply_rework_visibility(self) -> None:
-        if self.rework_mode_var.get() == "Yes":
-            self._rework_bmb_label.grid(row=3, column=0, sticky=tk.W, padx=(0, 10), pady=2)
-            self._rework_bmb_value.grid(row=3, column=1, sticky=tk.W, pady=2)
-            self._rework_cmb_label.grid(row=4, column=0, sticky=tk.W, padx=(0, 10), pady=2)
-            self._rework_cmb_value.grid(row=4, column=1, sticky=tk.W, pady=2)
-        else:
-            self._rework_bmb_label.grid_remove()
-            self._rework_bmb_value.grid_remove()
-            self._rework_cmb_label.grid_remove()
-            self._rework_cmb_value.grid_remove()
 
     def _is_rework(self) -> bool:
         return self.rework_mode_var.get() == "Yes"
@@ -163,8 +148,6 @@ class BmsIdGUI:
                 self._existing_record = existing
                 self.bmb_id_var.set(existing.bmb_id)
                 self.cmb_id_var.set(existing.cmb_id)
-                self.rework_bmb_var.set(existing.rework_bmb_id)
-                self.rework_cmb_var.set(existing.rework_cmb_id)
             else:
                 self.bmb_id_var.set("")
                 self.cmb_id_var.set("")
@@ -198,29 +181,42 @@ class BmsIdGUI:
             "Scan", "Unrecognized code. But Expecting a Pack QR, BMB, or CMB code.", parent=self.root,
         )
 
-    # ── Rework: patch log + immediate reprint with corrected ID 
+    # ── Rework: append a complete replacement record and print it.
     def _save_rework(self, kind: str, full_raw_id: str) -> None:
         if not self._pack_qr_raw or self._existing_record is None:
+            messagebox.showwarning(
+                "Rework", "Scan the pack QR before scanning the replacement ID.", parent=self.root
+            )
             return
-        pw = self._session.excel_password if self._session else "06082003"
-        ok = patch_rework(self._pack_qr_raw, kind, full_raw_id, excel_password=pw)
-        if not ok:
-            messagebox.showwarning("Rework", "Dummy Pack id not found in scan history.", parent=self.root)
-            return
-        try:
-            send_bms_rework(self._pack_qr_raw, kind, full_raw_id)
-        except requests.exceptions.RequestException as e:
-                print("Request failed:", e, parent=self.root)
-
-        if kind == "BMB":
-            self.rework_bmb_var.set(full_raw_id)
-        else:
-            self.rework_cmb_var.set(full_raw_id)
-
-        effective_bmb_raw = self.rework_bmb_var.get().strip() or self._existing_record.bmb_id.strip()
-        effective_cmb_raw = self.rework_cmb_var.get().strip() or self._existing_record.cmb_id.strip()
+        effective_bmb_raw = full_raw_id if kind == "BMB" else self._existing_record.bmb_id.strip()
+        effective_cmb_raw = full_raw_id if kind == "CMB" else self._existing_record.cmb_id.strip()
         if not (effective_bmb_raw and effective_cmb_raw):
             return  # shouldn't happen — original row always has both
+
+        now = datetime.now()
+        machine = get_machine_details()
+        status = self._next_rework_status(self._pack_qr_raw)
+        record = BmsScanRecord(
+            date=self._pack_date or self._existing_record.date,
+            time=now.strftime("%I:%M:%S %p"),
+            pack_qr_data=self._pack_qr_raw,
+            bmb_id=effective_bmb_raw,
+            cmb_id=effective_cmb_raw,
+            status=status,
+            machine_name=machine["machine_name"],
+            machine_id=machine["machine_id"],
+            reworked_kind=kind,
+        )
+        try:
+            excel_pw = self._session.excel_password if self._session else "06082003"
+            append_scan_record(record, excel_password=excel_pw)
+        except Exception as exc:
+            messagebox.showerror("Rework", f"Could not save rework record:\n{exc}", parent=self.root)
+            return
+        try:
+            send_bms_scan(record)
+        except requests.exceptions.RequestException as exc:
+            messagebox.showerror("Rework", f"Could not send rework record to server:\n{exc}", parent=self.root)
 
         zpl = build_bmb_cmb_combined_label(
             bmb_serial=short_bmb_cmb_id(effective_bmb_raw),
@@ -229,10 +225,20 @@ class BmsIdGUI:
         )
         dispatch_zpl(
             self.root, zpl, self.print_var.get(),
-            default_name=f"rework_bmb_cmb_{short_bmb_cmb_id(effective_bmb_raw)}.zpl",
+            default_name=f"{status.lower().replace(' ', '_')}_{short_bmb_cmb_id(effective_bmb_raw)}.zpl",
             printer_name=PRINTER_BMS_ID,
         )
         self.root.after(_RESET_DELAY_MS, self._reset_display)
+
+    def _next_rework_status(self, pack_qr: str) -> str:
+        previous_numbers = []
+        for record in load_all_records():
+            if record.pack_qr_data.strip() != pack_qr.strip():
+                continue
+            prefix, _, number = record.status.partition(" ")
+            if prefix == "Rework" and number.isdigit():
+                previous_numbers.append(int(number))
+        return f"Rework {max(previous_numbers, default=0) + 1}"
 
     # ── New-entry: collect all three, then auto-print + log 
     def _check_and_print(self) -> None:
@@ -259,6 +265,7 @@ class BmsIdGUI:
             pack_qr_data=pack_qr,
             bmb_id=self._bmb_parsed.raw,   # FULL ID in the scan log
             cmb_id=self._cmb_parsed.raw,
+            status="Original",
             machine_name=machine["machine_name"],
             machine_id=machine["machine_id"],
         )
@@ -278,8 +285,6 @@ class BmsIdGUI:
         self.pack_qr_var.set("")
         self.bmb_id_var.set("")
         self.cmb_id_var.set("")
-        self.rework_bmb_var.set("")
-        self.rework_cmb_var.set("")
         self._pack_qr_raw = ""
         self._pack_date = ""
         self._bmb_parsed = None

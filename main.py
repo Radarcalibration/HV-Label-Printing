@@ -1,12 +1,10 @@
- 
-
+import tkinter as tk
 import sys
 import traceback
 from pathlib import Path
 from tkinter import messagebox
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import tkinter as tk
 
 
 from common.auth.machine_lock import is_authorized
@@ -47,7 +45,7 @@ def main() -> None:
     root.geometry("1280x860")
     root.minsize(1000, 600)
     # root.resizable(False,False)
-    # root.state("zoomed")
+    root.state("zoomed")
 
     icon_path = ASSETS_DIR / "logo.ico"
     if icon_path.exists():

@@ -53,8 +53,7 @@ _COL_DEFS = {
         ("pack_qr_data",    "Pack QR Data",   240,  "w"),
         ("bmb_id",          "BMB ID",         150,  "center"),
         ("cmb_id",          "CMB ID",         150,  "center"),
-        ("rework_bmb_id",   "Rework BMB ID",  150,  "center"),
-        ("rework_cmb_id",   "Rework CMB ID",  150,  "center"),
+        ("status",          "Status",          100,  "center"),
     ],
 }
 
@@ -280,8 +279,8 @@ class ScanHistoryDialog(tk.Toplevel):
 
     def _reprint_bmb_cmb(self, idx: int, rec) -> None:
         
-        effective_bmb = rec.rework_bmb_id.strip() or rec.bmb_id.strip()
-        effective_cmb = rec.rework_cmb_id.strip() or rec.cmb_id.strip()
+        effective_bmb = rec.bmb_id.strip()
+        effective_cmb = rec.cmb_id.strip()
         if not (effective_bmb and effective_cmb):
             messagebox.showwarning("Reprint", "This record doesn't have both a BMB ID and a CMB ID yet.", parent=self)
             return
@@ -293,8 +292,7 @@ class ScanHistoryDialog(tk.Toplevel):
             pack_qr_data=rec.pack_qr_data,
         )
         dispatch_zpl(self, zpl, self._print_mode, default_name=f"reprint_bmb_cmb_{idx+1}.zpl", printer_name=PRINTER_DUMMY)
-        note = " (using rework ID)" if (rec.rework_bmb_id.strip() or rec.rework_cmb_id.strip()) else ""
-        self._status_var.set(f"Reprinted (bmb_cmb) row {idx + 1}{note}")
+        self._status_var.set(f"Reprinted (bmb_cmb) row {idx + 1} - {rec.status}")
 
     def _open_excel(self) -> None:
         try:

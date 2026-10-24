@@ -11,7 +11,7 @@ from models.hv.gui.constants import (
     format_pack_qr_data,
     get_type_of_reess,
 )
-from models.hv.gui.layout import FIELD_FONT, FIELD_IPADY, HEADING_FONT, LABEL_FONT
+from models.hv.gui.layout import FIELD_FONT, FIELD_IPADY, HEADING_FONT
 from models.hv.gui.print_actions import dispatch_zpl
 from models.hv.gui.scan_history import open_scan_history
 from models.hv.gui.scanner import setup_hardware_scanner
@@ -74,25 +74,19 @@ class DummyIdGUI:
 
         row = ttk.Frame(section)
         row.pack(fill=tk.X)
-
-
-        row.columnconfigure(0, weight=6)
-        row.columnconfigure(1, weight=4)
+        row.columnconfigure(0, weight=1)
 
         entry = ttk.Entry(row, textvariable=self.serial_entry_var, font=FIELD_FONT)
-        entry.grid(row=0, column=0, sticky="ew", padx=(0, 14), ipady=FIELD_IPADY + 2)
+        entry.grid(row=0, column=0, sticky="ew", padx=(0, 14), ipady=FIELD_IPADY)
         setup_hardware_scanner(entry, self.serial_entry_var, self._on_serial_submitted)
 
-        controls = ttk.Frame(row)
-        controls.grid(row=0, column=1, sticky="ew")
-        ttk.Label(controls, text="Print Mode", font=LABEL_FONT).pack(anchor=tk.W)
-        mode_row = ttk.Frame(controls)
-        mode_row.pack(fill=tk.X, pady=(5, 0))
         ttk.Combobox(
-            mode_row, textvariable=self.print_var, values=["print", "pdf"],
+            row, textvariable=self.print_var, values=["print", "pdf"],
             state="readonly", width=10, justify="center",
-        ).pack(side=tk.LEFT, ipady=FIELD_IPADY)
-        ttk.Button(mode_row, text="History", command=self._open_history, width=10).pack(side=tk.LEFT, padx=(8, 0))
+        ).grid(row=0, column=1, sticky=tk.E, ipady=FIELD_IPADY, padx=(0, 8))
+        ttk.Button(
+            row, text="History", command=self._open_history, width =10,
+        ).grid(row=0, column=2, sticky=tk.E, )
 
     # ── Serial entry → details popup
     def _on_serial_submitted(self, raw: str) -> None:

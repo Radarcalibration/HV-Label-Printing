@@ -18,7 +18,7 @@ def add_category_field(
     compact = grid_column is not None
     frame = ttk.Frame(parent)
     if compact:
-        frame.grid(row=0, column=grid_column, sticky="nsew", padx=(0, 8))
+        frame.grid(row=0, column=grid_column, sticky="nsew", padx=(0, 10))
     else:
         frame.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
 
@@ -28,7 +28,11 @@ def add_category_field(
         frame, textvariable=category_var, values=CATEGORY_OPTIONS,
         state="readonly", font=FIELD_FONT,
     )
-    combo.pack(fill=tk.X, pady=(2, 0), ipady=2 if compact else FIELD_IPADY)
+    combo.pack(
+        fill=tk.X,
+        pady=(5, 0) if compact else (2, 0),
+        ipady=FIELD_IPADY,
+    )
     return combo
 
 

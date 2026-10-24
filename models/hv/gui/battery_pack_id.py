@@ -72,6 +72,8 @@ class BatteryPackIdGUI:
         self._param_labels, self.serial_number_var, self._serial_number_entry, self._captions = (
             build_battery_parameters_panel(container, plain_labels=True)
         )
+        self.serial_number_var.set("--Waiting for Scan--")
+        self._param_labels["model_number"].configure(text="--Waiting for Scan--")
 
     def _build_config_row(self, parent: ttk.Frame) -> None:
         config_frame = ttk.Frame(parent, padding=(0, 0, 0, 10))
@@ -102,7 +104,7 @@ class BatteryPackIdGUI:
                 self._variant_combo,
                 self._on_variant_change,
             )
-        self.variant_var.trace_add("read", self._on_variant_change)
+        self.variant_var.trace_add("write", self._on_variant_change)
 
     def _add_config_dropdown(
         self,
@@ -141,7 +143,11 @@ class BatteryPackIdGUI:
             self._param_labels,
             rated_capacity=params["rated_capacity"],
             max_voltage=params["max_voltage"],
-            model_number=get_type_of_reess(variant, cell_mfr) if cell_mfr else "NA",
+            model_number=(
+                get_type_of_reess(variant, cell_mfr)
+                if cell_mfr and cell_mfr != "--Waiting for Scan--"
+                else "--Waiting for Scan--"
+            ),
             tac_number=params["tac_number"],
             emark=params["emark"],
             category=category,
@@ -266,8 +272,9 @@ class BatteryPackIdGUI:
 
     def _reset_fields(self) -> None:
         self.scanner_var.set("")
-        self.cell_mfr_var.set("Waiting for Scan--")
+        self.cell_mfr_var.set("--Waiting for Scan--")
         self.serial_number_var.set("--Waiting for Scan--")
+        self._param_labels["model_number"].configure(text="--Waiting for Scan--")
         
         
 
