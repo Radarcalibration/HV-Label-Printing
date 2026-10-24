@@ -1,5 +1,3 @@
- 
-
 import tkinter as tk
 from tkinter import messagebox, ttk
 import requests
@@ -7,7 +5,7 @@ import requests
 from api.Client import get_machine_details, send_pack_id_scan
 from models.hv.gui.battery_parameters import build_battery_parameters_panel, set_battery_parameters
 from models.hv.gui.category_controls import add_category_field, bind_category_variant
-from models.hv.gui.constants import VARIANT_OPTIONS, VARIANT_PARAMS, format_pack_qr_data, get_type_of_reess #,get_emark,
+from models.hv.gui.constants import VARIANT_OPTIONS, VARIANT_PARAMS, format_pack_qr_data, get_type_of_reess
 from models.hv.gui.layout import FIELD_FONT, FIELD_IPADY, HEADING_FONT, LABEL_FONT, configure_equal_columns
 from models.hv.gui.permissions import set_combobox_enabled
 from models.hv.gui.print_actions import dispatch_zpl
@@ -145,8 +143,8 @@ class BatteryPackIdGUI:
             max_voltage=params["max_voltage"],
             model_number=(
                 get_type_of_reess(variant, cell_mfr)
-                if cell_mfr and cell_mfr != "--Waiting for Scan--"
-                else "--Waiting for Scan--"
+                if cell_mfr
+                else ""
             ),
             tac_number=params["tac_number"],
             emark=params["emark"],
@@ -274,7 +272,7 @@ class BatteryPackIdGUI:
         self.scanner_var.set("")
         self.cell_mfr_var.set("--Waiting for Scan--")
         self.serial_number_var.set("--Waiting for Scan--")
-        self._param_labels["model_number"].configure(text="--Waiting for Scan--")
+        self._param_labels["model_number"].configure(text="NA")
         
         
 
@@ -285,7 +283,7 @@ class BatteryPackIdGUI:
         result = identify_scan(raw)
         self.scanner_var.set(result.raw)
 
-        if result.scan_type == ScanType.SERIAL_NUMBER and result.serial is not None:
+        if result.scan_type == ScanType.SERIAL_NUMBER and result.serial is not None: # serial number is not accepted, only dummy pack id is accepted
             if result.pack_variant is None or result.cell_mfr is None:
                 self.scanner_var.set("")
                 messagebox.showwarning(
@@ -310,7 +308,7 @@ class BatteryPackIdGUI:
         if result.scan_type == ScanType.MODULE_ID:
             messagebox.showwarning(
                 "Scan",
-                "Module ID scanned. expects the pack serial QR code.",
+                "This is Module id, Scan Dummy Pack id.",
                 parent=self.root,
             )
             return
@@ -318,10 +316,10 @@ class BatteryPackIdGUI:
         else:
             messagebox.showwarning(
                 "Scan",
-                "Unrecognized code. Scan the pack serial number QR code.",
+                "Unrecognized code. Scan the Dummy Pack id.",
                 parent=self.root,
             )
-            self.scanner_var.set("")
+            self.scanner_var.set("") # resets Scan box for invalid entry
             
 
     def run(self) -> None:
@@ -332,10 +330,5 @@ def open_battery_pack_id(parent: tk.Tk | tk.Toplevel | None = None) -> BatteryPa
     return BatteryPackIdGUI(parent)
 
 
-def main() -> None:
-    app = BatteryPackIdGUI()
-    app.run()
-
-
 if __name__ == "__main__":
-    main()
+    BatteryPackIdGUI().run()

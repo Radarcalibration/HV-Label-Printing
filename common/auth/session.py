@@ -1,5 +1,3 @@
- 
-
 from common.auth.user_store import ROLE_ADMIN, ROLE_OPERATOR
 
 

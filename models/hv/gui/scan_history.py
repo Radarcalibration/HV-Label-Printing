@@ -215,7 +215,7 @@ class ScanHistoryDialog(tk.Toplevel):
         from models.hv.nomenclature.scan_handler import identify_scan
         variant = rec.variant.strip() if rec.variant.strip() in VARIANT_OPTIONS else self._variant
         scan = identify_scan(rec.dummy_pack_qr)
-        if scan.serial is None or (scan.serial.is_new_format and scan.serial.cell_mfr is None):
+        if scan.serial is None:
             messagebox.showwarning(
                 "Reprint",
                 "Unrecognized Code, Check With the Nomenclature of Pack ID or Dummy ID.",

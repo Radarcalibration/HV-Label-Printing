@@ -23,15 +23,14 @@ Functions:
 
 # common/nomenclature/serial_number.py
 Classes:
-- `ParsedSerialNumber`: stores a parsed serial number and its extracted fields such as plant, model, date, category, and new-format flags.
+- `ParsedSerialNumber`: stores a parsed serial number and its extracted fields such as plant, model, date, category, and cell manufacturer.
 Functions:
-- `is_new_format()`: checks if the serial uses the newer packing format.
 - `is_export()`: detects export category values.
 - `as_date()`: converts the embedded date into a Python date object.
 - `format_date()`: returns a readable date string for labels and logs.
 - `build_serial_number()`: creates a serial number from component values.
 - `build_serial_number_for_model()`: builds a serial number for a specific model and letter code.
-- `_parse_new_format()`: extracts all fields from new-format serials.
+- `_parse_serial_number()`: extracts the serial number fields.
 - `parse_serial_number()`: entry point that reads a raw serial string and returns a ParsedSerialNumber object.
 
 # common/auth/__init__.py
@@ -146,8 +145,7 @@ Class:
 Functions:
 - `__init__()`: creates the screen and binds it to the session.
 - `_init_serial()`: initializes the serial-number rules for the selected screen.
-- `_using_new_format()`: checks whether the serial is in the newer format.
-- `_new_format_kwargs()`: maps new-format fields into the accepted arguments for pack creation.
+- `_serial_number_kwargs()`: maps serial fields into the accepted arguments for pack creation.
 - `_rebuild_and_store_serial()`: rebuilds the serial and stores it back into the database.
 - `_build_ui()`: creates the main layout.
 - `_build_config_rows()`: builds the row of configuration values shown to the operator.

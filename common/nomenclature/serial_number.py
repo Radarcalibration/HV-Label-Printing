@@ -1,10 +1,8 @@
- 
-
 import re
 from dataclasses import dataclass
 from datetime import date, datetime
 
-# -- NEW format codes
+# Serial number codes
 NEW_PLANT_CODES = {
     "jigani": "A",
     "domlur": "B",
@@ -21,25 +19,25 @@ MODEL_CODES = {
 MODEL_BY_CODE = {code: name for name, code in MODEL_CODES.items()}
 
 MODULE_VARIANT_CODES_NEW = {
-    # "33P": "A1",  # low voltage
-    # "48P": "A2",  # low voltage
+    "33P": "A1",  # low voltage
+    "48P": "A2",  # low voltage
     "12P": "A3",  # high voltage
     "16P": "A4",  # high voltage
     "24P": "A5",  # high voltage
     "27P": "A6",  # high voltage
-    # "8P": "A7",   # Shockwave
-    # "10P": "A8",  # Shockwave + tesseract
+    "8P": "A7",   # Shockwave
+    "10P": "A8",  # Shockwave + tesseract
 }
 VARIANT_BY_CODE_NEW = {code: name for name, code in MODULE_VARIANT_CODES_NEW.items()}
 
-# Category: numeric in the new format.
+# Category code.
 CATEGORY_CODES_NEW = {
     "domestic": "1",
     "export": "2",
 }
 CATEGORY_BY_CODE_NEW = {code: name for name, code in CATEGORY_CODES_NEW.items()}
 
-# Cell manufacturer: letter in the new format.
+# Cell manufacturer code.
 CELL_MFR_CODES_NEW = {
     "molical": "P",
     "samsung": "Q",
@@ -74,14 +72,10 @@ class ParsedSerialNumber:
     day: int
     serial_count: str
     raw: str
-    model: str | None = None
-    variant: str | None = None
-    cell_mfr: str | None = None
-    category: str | None = None
-
-    @property
-    def is_new_format(self) -> bool:
-        return self.model is not None
+    model: str
+    variant: str
+    cell_mfr: str
+    category: str
 
     @property
     def is_export(self) -> bool:
@@ -111,9 +105,7 @@ def build_serial_number(
     if isinstance(when, datetime):
         when = when.date()
 
-    # new_format_requested = any(v is not None for v in (model, variant, cell_mfr,  category)) #shift,
-
-    # -- NEW format --
+    # Build the supported serial number format.
     if plant_key not in NEW_PLANT_CODES:
         raise ValueError(f"Unsupported plant: {plant}")
     if line not in {"1", "2", "3"}:
@@ -157,7 +149,7 @@ def build_serial_number_for_model(
     when: datetime | date,
     serial_count: str,
     variant: str,
-    cell_mfr: str, #| None = None,
+    cell_mfr: str,
     category: str,
 ) -> str:
     
@@ -173,7 +165,7 @@ def build_serial_number_for_model(
     )
 
 
-def _parse_new_format(cleaned: str) -> ParsedSerialNumber | None:
+def _parse_serial_number(cleaned: str) -> ParsedSerialNumber | None:
     match = NEW_SERIAL_NUMBER_PATTERN.match(cleaned)
     if not match:
         return None
@@ -185,13 +177,13 @@ def _parse_new_format(cleaned: str) -> ParsedSerialNumber | None:
     category_code = g["category"]
     manufacturer_code = g["cell_mfr"]
 
-    if plant_code not in NEW_PLANT_BY_CODE:
-        return None
-    if model_code not in MODEL_BY_CODE:
-        return None
-    if variant_code not in VARIANT_BY_CODE_NEW:
-        return None
-    if manufacturer_code not in CELL_MFR_BY_CODE_NEW:
+    if (
+        plant_code not in NEW_PLANT_BY_CODE
+        or model_code not in MODEL_BY_CODE
+        or variant_code not in VARIANT_BY_CODE_NEW
+        or manufacturer_code not in CELL_MFR_BY_CODE_NEW
+        or category_code not in CATEGORY_BY_CODE_NEW
+    ):
         return None
 
     try:
@@ -209,7 +201,7 @@ def _parse_new_format(cleaned: str) -> ParsedSerialNumber | None:
         raw=cleaned,
         model=MODEL_BY_CODE[model_code],
         variant=VARIANT_BY_CODE_NEW[variant_code],
-        cell_mfr=CELL_MFR_BY_CODE_NEW.get(manufacturer_code),
+        cell_mfr=CELL_MFR_BY_CODE_NEW[manufacturer_code],
         category=CATEGORY_BY_CODE_NEW[category_code],
     )
 
@@ -217,7 +209,4 @@ def _parse_new_format(cleaned: str) -> ParsedSerialNumber | None:
 def parse_serial_number(value: str) -> ParsedSerialNumber | None:
     cleaned = value.strip().upper()
 
-    if len(cleaned) == 20:
-        return _parse_new_format(cleaned)
-
-    return _parse_new_format(cleaned)
+    return _parse_serial_number(cleaned)

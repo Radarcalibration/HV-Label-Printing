@@ -13,7 +13,6 @@ from models.hv.gui.constants import (
     SHIFT_CODES_HV,
     MONTH_CODES, MONTH_BY_CODE,
     get_model_number,
-    VARIANT_TO_MODEL_BY_CELL_MFR,
 )
 
 _SUB_PATTERN = re.compile(
@@ -33,31 +32,24 @@ _SUB_PATTERN = re.compile(
 _FULL_PATTERN = re.compile(
     r"^(?P<part_number>V[QX][0-9]{6})-(?P<sub>[C-F][1-3][1-6][123ABC][123][123]\d{2}[A-L]\d{2}\d{4})$"
 )
-_COMPACT_PATTERN = re.compile(
-    r"^(?P<part_number>V[QX][0-9]{6})-(?P<variant>[C-F])(?P<group>[1-3])[A-Z0-9]{0,13}$"
-)
-
 @dataclass(frozen=True)
 class ParsedModuleId:
     variant: str
     part_number: str   
     group: str        
-    cell_mfr: str | None
-    plant: str | None
-    line: str | None
-    day: int | None
-    month: int | None
-    year: int | None
-    shift: str | None
-    serial: str | None
+    cell_mfr: str
+    plant: str
+    line: str
+    day: int
+    month: int
+    year: int
+    shift: str
+    serial: str
     sub_id: str         
     raw: str          
-    is_compact_format: bool = False
 
     @property
-    def as_date(self) -> date | None:
-        if self.year is None or self.month is None or self.day is None:
-            return None
+    def as_date(self) -> date:
         return date(self.year, self.month, self.day)
 
 
@@ -159,38 +151,7 @@ def parse_module_id(value: str) -> ParsedModuleId | None:
     cleaned = value.strip().upper()
     m = _FULL_PATTERN.match(cleaned)
     if not m:
-        compact_match = _COMPACT_PATTERN.match(cleaned)
-        if not compact_match:
-            return None
-
-        part_number = compact_match.group("part_number")
-        variant = VARIANT_BY_CODE.get(compact_match.group("variant"))
-        group = GROUP_BY_CODE.get(compact_match.group("group"))
-        if not variant or not group:
-            return None
-
-        if not any(
-            models.get(variant) == part_number
-            for models in VARIANT_TO_MODEL_BY_CELL_MFR.values()
-        ):
-            return None
-
-        return ParsedModuleId(
-            variant=variant,
-            part_number=part_number,
-            group=group,
-            cell_mfr=None,
-            plant=None,
-            line=None,
-            day=None,
-            month=None,
-            year=None,
-            shift=None,
-            serial=None,
-            sub_id=cleaned.split("-", 1)[1],
-            raw=cleaned,
-            is_compact_format=True,
-        )
+        return None
 
     part_number = m.group("part_number")
     sub   = m.group("sub")
@@ -205,7 +166,13 @@ def parse_module_id(value: str) -> ParsedModuleId | None:
     group    = GROUP_BY_CODE.get(g["group"])
     month    = MONTH_BY_CODE.get(g["month"])
 
-    if not all([variant, cell_mfr, plant, group, month]):
+    if (
+        variant is None
+        or cell_mfr is None
+        or plant is None
+        or group is None
+        or month is None
+    ):
         return None
 
     if get_model_number(variant, cell_mfr) != part_number:

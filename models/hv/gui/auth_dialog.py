@@ -1,5 +1,3 @@
- 
-
 import tkinter as tk
 from collections.abc import Callable
 from typing import Any
@@ -54,7 +52,7 @@ class LoginDialog(_CenteredDialog):
 
         frame.columnconfigure(1, weight=1)
         self.username_entry.focus_set()
-        self.bind("<Return>", lambda _event: self._submit())
+        self.bind("<Return>", lambda _event: self._submit()) # lambda _event cannot execute immediatly like command
 
         self._center_over_parent(parent)
 

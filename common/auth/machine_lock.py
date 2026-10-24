@@ -1,5 +1,3 @@
- 
-
 import hashlib
 import platform
 import sys
@@ -35,9 +33,9 @@ def is_authorized() -> bool:
 
 
 if __name__ == "__main__":
-    # python -m common.auth.machine_lock
+    """ run this file to get machine's hash"""
     print("This machine's hash:")
     print(get_machine_hash())
     print()
     print("Add this to AUTHORIZED_HASHES in auth/machine_lock.py to authorize it.")
-    sys.exit(0) # sys.exit(1) due to errors
+    sys.exit(0) # if sys.exit(1) -> due to errors

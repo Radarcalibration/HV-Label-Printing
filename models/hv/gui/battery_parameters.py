@@ -1,5 +1,3 @@
- 
-
 import tkinter as tk
 from tkinter import ttk
 
@@ -44,34 +42,34 @@ def build_battery_parameters_panel(
             row=0, column=0, sticky=tk.W, padx=(0, 12)
         )
 
-        if editable:
-            if plain_labels:
-                widget = ttk.Label(
-                    row,
-                    textvariable=serial_number_var,
-                    font=FIELD_FONT,
-                    anchor=tk.W,
-                )
-                widget.grid(row=0, column=1, sticky="ew")
-                serial_number_entry = None
-            else:
-                widget = ttk.Entry(
-                    row,
-                    textvariable=serial_number_var,
-                    font=FIELD_FONT,
-                    style="Plain.TEntry",
-                )
-                widget.grid(row=0, column=1, sticky="ew", ipady=2)
-                serial_number_entry = widget
-        else:
-            value_label = ttk.Label(
+        # if editable:
+        #     if plain_labels:
+        #         widget = ttk.Label(
+        #             row,
+        #             textvariable=serial_number_var,
+        #             font=FIELD_FONT,
+        #             anchor=tk.W,
+        #         )
+        #         widget.grid(row=0, column=1, sticky="ew")
+        #         serial_number_entry = None
+        #     else:
+        #         widget = ttk.Entry(
+        #             row,
+        #             textvariable=serial_number_var,
+        #             font=FIELD_FONT,
+        #             style="Plain.TEntry",
+        #         )
+        #         widget.grid(row=0, column=1, sticky="ew", ipady=2)
+        #         serial_number_entry = widget
+        # else:
+        value_label = ttk.Label(
                 row,
                 text="",
                 anchor=tk.W,
                 font=VALUE_FONT,
             )
-            value_label.grid(row=0, column=1, sticky="ew", padx=(0, 4))
-            param_labels[key] = value_label
+        value_label.grid(row=0, column=1, sticky="ew", padx=(0, 4))
+        param_labels[key] = value_label
 
     return param_labels, serial_number_var, serial_number_entry, captions
 

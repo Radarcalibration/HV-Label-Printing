@@ -1,5 +1,3 @@
- 
-
 import tkinter as tk
 from tkinter import messagebox, ttk
 from requests.exceptions import RequestException
@@ -73,58 +71,32 @@ class AdminSettingsDialog(tk.Toplevel):
         self._machine_name = tk.StringVar(value=machine["machine_name"])
         self._machine_id = tk.StringVar(value=machine["machine_id"])
         
-        ttk.Label(form).grid(row=4, column=0, sticky=tk.W, padx=(0, 10), pady=6)
-        ttk.Label(form).grid(row=5, column=0, sticky=tk.W, padx=(0, 10), pady=6)
-        ttk.Label(form).grid(row=6, column=0, sticky=tk.W, padx=(0, 10), pady=6)
-        ttk.Label(form).grid(row=7, column=0, sticky=tk.W, padx=(0, 10), pady=6)
-        ttk.Label(form).grid(row=8, column=0, sticky=tk.W, padx=(0, 10), pady=6)
-        ttk.Label(form).grid(row=9, column=0, sticky=tk.W, padx=(0, 10), pady=6)
         
-        ttk.Label(form, text="Machine Name:").grid(
-                    row=5, column=0, sticky=tk.W, padx=(0, 10), pady=6
-                )
-        ttk.Entry(form, textvariable=self._machine_name).grid(
-            row=5, column=1, sticky=tk.EW, pady=6
-        )
+        ttk.Label(form, text="Machine Name:").grid(row=5, column=0, sticky=tk.W, padx=(0, 10), pady=6)
+        ttk.Entry(form, textvariable=self._machine_name).grid(row=5, column=1, sticky=tk.EW, pady=6)
         
-        ttk.Label(form, text="Machine ID:").grid(
-            row=5, column=2, sticky=tk.W, padx=(0, 10), pady=6
-        )
-        ttk.Entry(form, textvariable=self._machine_id).grid(
-            row=5, column=3, sticky=tk.EW, pady=6
-        )
+        ttk.Label(form, text="Machine ID:").grid(row=5, column=2, sticky=tk.W, padx=(0, 10), pady=6)
+        ttk.Entry(form, textvariable=self._machine_id).grid(row=5, column=3, sticky=tk.EW, pady=6)
         
-        ttk.Label(form, text="Dummy API URL:").grid(
-            row=0, column=0, sticky=tk.W, padx=(0, 10), pady=6
-        )
-        ttk.Entry(form, textvariable=self._dummy_api_url_var).grid(
-            row=0, column=1, sticky=tk.EW, pady=6
-        )
-        ttk.Label(form, text="Dummy API KEY:").grid(
-            row=0, column=2, sticky=tk.W, padx=(0, 10), pady=6
-        )
-        ttk.Entry(form, textvariable=self._dummy_api_key_var, show="*").grid(
-            row=0, column=3, sticky=tk.EW, pady=6
-        )
+        ttk.Label(form, text="Dummy API URL:").grid(row=0, column=0, sticky=tk.W, padx=(0, 10), pady=6)
+        ttk.Entry(form, textvariable=self._dummy_api_url_var).grid(row=0, column=1, sticky=tk.EW, pady=6)
+        
+        ttk.Label(form, text="Dummy API KEY:").grid(row=0, column=2, sticky=tk.W, padx=(0, 10), pady=6)
+        ttk.Entry(form, textvariable=self._dummy_api_key_var, show="*").grid(row=0, column=3, sticky=tk.EW, pady=6)
+        
         ttk.Checkbutton(
             form,
             text="Enable server call",
             variable=self._api_call_vars["dummy"],
             command=lambda: self._save_api_call_setting("dummy"),
         ).grid(row=0, column=4, sticky=tk.W, padx=(10, 0), pady=6)
-        ttk.Label(form, text="Pack ID API URL:").grid(
-            row=1, column=0, sticky=tk.W, padx=(0, 10), pady=6
-        )
-        ttk.Entry(form, textvariable=self._pack_id_api_url_var).grid(
-            row=1, column=1, sticky=tk.EW, pady=6
-        )
+        
+        ttk.Label(form, text="Pack ID API URL:").grid(row=1, column=0, sticky=tk.W, padx=(0, 10), pady=6)
+        ttk.Entry(form, textvariable=self._pack_id_api_url_var).grid(row=1, column=1, sticky=tk.EW, pady=6)
 
-        ttk.Label(form, text="Pack ID API KEY:").grid(
-            row=1, column=2, sticky=tk.W, padx=(0, 10), pady=6
-        )
-        ttk.Entry(form, textvariable=self._pack_id_api_key_var, show="*").grid(
-            row=1, column=3, sticky=tk.EW, pady=6
-        )
+        ttk.Label(form, text="Pack ID API KEY:").grid(row=1, column=2, sticky=tk.W, padx=(0, 10), pady=6)
+        ttk.Entry(form, textvariable=self._pack_id_api_key_var, show="*").grid(row=1, column=3, sticky=tk.EW, pady=6)
+        
         ttk.Checkbutton(
             form,
             text="Enable server call",
@@ -132,19 +104,12 @@ class AdminSettingsDialog(tk.Toplevel):
             command=lambda: self._save_api_call_setting("pack_id"),
         ).grid(row=1, column=4, sticky=tk.W, padx=(10, 0), pady=6)
 
-        ttk.Label(form, text="BMS API URL:").grid(
-            row=2, column=0, sticky=tk.W, padx=(0, 10), pady=6
-        )
-        ttk.Entry(form, textvariable=self._bms_api_url_var).grid(
-            row=2, column=1, sticky=tk.EW, pady=6
-        )
+        ttk.Label(form, text="BMS API URL:").grid(row=2, column=0, sticky=tk.W, padx=(0, 10), pady=6)
+        ttk.Entry(form, textvariable=self._bms_api_url_var).grid(row=2, column=1, sticky=tk.EW, pady=6)
 
-        ttk.Label(form, text="BMS API KEY:").grid(
-            row=2, column=2, sticky=tk.W, padx=(0, 10), pady=6
-        )
-        ttk.Entry(form, textvariable=self._bms_api_key_var, show="*").grid(
-            row=2, column=3, sticky=tk.EW, pady=6
-        )
+        ttk.Label(form, text="BMS API KEY:").grid(row=2, column=2, sticky=tk.W, padx=(0, 10), pady=6)
+        ttk.Entry(form, textvariable=self._bms_api_key_var, show="*").grid(row=2, column=3, sticky=tk.EW, pady=6)
+        
         ttk.Checkbutton(
             form,
             text="Enable server call",
@@ -154,9 +119,7 @@ class AdminSettingsDialog(tk.Toplevel):
 
         form.columnconfigure(3, weight=1)
 
-        ttk.Button(form, text="Save", command=self.save_all_settings).grid(
-            row=10, column=4, sticky=tk.E, pady=(10, 0)
-        )
+        ttk.Button(form, text="Save", command=self.save_all_settings).grid(row=10, column=4, sticky=tk.E, pady=(10, 0))
 
     
     def save_all_settings(self):
@@ -169,14 +132,12 @@ class AdminSettingsDialog(tk.Toplevel):
             save_machine_details(self._machine_name.get(), self._machine_id.get())
         except Exception as exc:
             messagebox.showerror(
-                "Save error", f"Could not save machine details:\n{exc}", parent=self
-            )
+                "Save error", f"Could not save machine details:\n{exc}", parent=self)
             return
         messagebox.showinfo(
             "Machine details saved",
             "Machine name and ID have been updated.",
-            parent=self,
-        )
+            parent=self,)
                 
     def _save_api_call_setting(self, endpoint: str) -> None:
         set_api_call_enabled(endpoint, self._api_call_vars[endpoint].get())
@@ -189,20 +150,17 @@ class AdminSettingsDialog(tk.Toplevel):
             messagebox.showerror(
                 "Invalid API URL",
                 "Enter a valid URL beginning with http:// or https:// for all endpoints.",
-                parent=self,
-            )
+                parent=self,)
             return
 
         try:
             save_api_urls(dummy_url, pack_id_url, bms_url)
         except Exception as exc:
             messagebox.showerror(
-                "Save error", f"Could not save API URLs:\n{exc}", parent=self
-            )
+                "Save error", f"Could not save API URLs:\n{exc}", parent=self)
             return
         messagebox.showinfo(
-            "API URLs saved", "The API endpoints have been updated.", parent=self
-        )
+            "API URLs saved", "The API endpoints have been updated.", parent=self)
 
     def save_api_keys_button(self) -> None:
         endpoint_settings = {

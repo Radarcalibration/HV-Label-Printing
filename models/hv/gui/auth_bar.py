@@ -1,5 +1,3 @@
- 
-
 import tkinter as tk
 from collections.abc import Callable
 from tkinter import ttk
@@ -42,25 +40,25 @@ class AuthBar(ttk.Frame):
             self._logout_btn.pack(side=tk.RIGHT)
             if self.session.is_main_admin:
                 self._settings_btn.pack(side=tk.RIGHT, padx=(0, 8))
-                self._maybe_notify_unacknowledged()
+                # self._maybe_notify_unacknowledged()
         else:
             self.status_var.set("User")
             self._login_btn.pack(side=tk.RIGHT, padx=(8, 0))
 
-    def _maybe_notify_unacknowledged(self) -> None:
-        # One popup per login, not one per screen switch/rebuild.
-        if self._notified_this_session:
-            return
-        self._notified_this_session = True
-        count = len(load_unacknowledged_issues())
-        if count:
-            from tkinter import messagebox
-            plural = "entry" if count == 1 else "entries"
-            messagebox.showinfo(
-                "Unacknowledged issues",
-                f"{count} unacknowledged issue {plural}.\n\n",
-                parent=self.winfo_toplevel(),
-            )
+    # def _maybe_notify_unacknowledged(self) -> None:
+    #     # One popup per login, not one per screen switch/rebuild.
+    #     if self._notified_this_session:
+    #         return
+    #     self._notified_this_session = True
+    #     count = len(load_unacknowledged_issues())
+    #     if count:
+    #         from tkinter import messagebox
+    #         plural = "entry" if count == 1 else "entries"
+    #         messagebox.showinfo(
+    #             "Unacknowledged issues",
+    #             f"{count} unacknowledged issue {plural}.\n\n",
+    #             parent=self.winfo_toplevel(),
+    #         )
 
     def _open_login(self) -> None:
         open_login_dialog(self.winfo_toplevel(), self._handle_login)

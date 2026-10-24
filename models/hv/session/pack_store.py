@@ -154,28 +154,17 @@ def increment_pack_serial() -> str:
     if parsed is None:
         return current
 
-    pad = 5 if parsed.is_new_format else 6
-    new_count = str(int(parsed.serial_count) + 1).zfill(pad)
-
-    extra = {}
-    if parsed.is_new_format:
-        if parsed.cell_mfr is None:
-            new_serial = f"{parsed.raw[:-5]}{new_count}"
-            save_pack_serial(new_serial)
-            return new_serial
-        extra = {
-            "model": parsed.model,
-            "variant": parsed.variant,
-            "cell_mfr": parsed.cell_mfr,
-            "category": parsed.category,
-        }
+    new_count = str(int(parsed.serial_count) + 1).zfill(5)
 
     new_serial = build_serial_number(
         plant=parsed.plant,
         line=parsed.line,
         when=parsed.as_date,
         serial_count=new_count,
-        **extra,
+        model=parsed.model,
+        variant=parsed.variant,
+        cell_mfr=parsed.cell_mfr,
+        category=parsed.category,
     )
     save_pack_serial(new_serial)
     return new_serial

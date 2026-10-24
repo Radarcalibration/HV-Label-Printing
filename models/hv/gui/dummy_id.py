@@ -106,9 +106,9 @@ class DummyIdGUI:
             result.cell_mfr if result.cell_mfr in DUMMY_CELL_MFR_OPTIONS else "--Select--"
         )
         self.serial_entry_var.set(result.serial.raw)
-        self._open_details_popup(preselect_variant=result.pack_variant)
+        self._open_details_popup()
 
-    def _open_details_popup(self, *, preselect_variant: str | None) -> None:
+    def _open_details_popup(self) -> None:
         popup = tk.Toplevel(self.root)
         popup.title("Pack Details")
         popup.resizable(False, False)
@@ -132,24 +132,10 @@ class DummyIdGUI:
         ).grid(row=1, column=1, sticky="ew", pady=3)
 
         parsed = self._parsed_serial
-        is_new_format = parsed is not None and parsed.is_new_format
-        auto_variant = parsed.variant if is_new_format else None
-
-        variant_var = tk.StringVar(
-            value=auto_variant
-            or (preselect_variant if preselect_variant in VARIANT_OPTIONS else VARIANT_OPTIONS[0])
-        )
+        variant_var = tk.StringVar(value=parsed.variant)
         ref_no_var = tk.StringVar()
 
         next_row = 2
-        if not is_new_format:
-            ttk.Label(frame, text="Variant").grid(row=next_row, column=0, sticky=tk.W, pady=3, padx=(0, 10))
-            ttk.Combobox(
-                frame, textvariable=variant_var, values=VARIANT_OPTIONS,
-                state="readonly", width=22, justify="center",
-            ).grid(row=next_row, column=1, sticky="ew", pady=3)
-            next_row += 1
-
         ttk.Label(frame, text="Ref No").grid(row=next_row, column=0, sticky=tk.W, pady=3, padx=(0, 10))
         ttk.Entry(frame, textvariable=ref_no_var, width=24).grid(row=next_row, column=1, sticky="ew", pady=3)
         next_row += 1
@@ -195,7 +181,7 @@ class DummyIdGUI:
             return
         serial = parsed.raw
 
-        category = "Export" if parsed.is_new_format and parsed.is_export else "Domestic"
+        category = "Export" if parsed.is_export else "Domestic"
 
         params = VARIANT_PARAMS.get(variant, VARIANT_PARAMS[VARIANT_OPTIONS[-1]])
         cell_mfr = self.cell_mfr_var.get()

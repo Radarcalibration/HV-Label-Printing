@@ -36,7 +36,7 @@ from models.hv.session.pack_store import (
 from models.hv.session.scan_log import ScanRecord, append_scan_record
 
 COMPACT_IPADY = 2
-_RESET_DELAY_MS = 200
+_RESET_DELAY_MS = 1000
 
 
 def _format_time(dt: datetime) -> str:
@@ -75,7 +75,7 @@ class BatteryPackDummyGUI:
         self.print_var = tk.StringVar(value="print")
 
 
-        self._true_date = datetime.now().date() #always call today date, no ecncoded date fallback should happen 
+        self._true_date = datetime.now().date() #always call today date, no ecncoded date rollback should happen 
 
         self._build_ui()
         self._refresh_datetime()
@@ -103,12 +103,7 @@ class BatteryPackDummyGUI:
             self._rebuild_and_store_serial()
 
 
-    def _using_new_format(self) -> bool:
-        fmt = self.vars.get("pack_id_format")
-        return fmt is None or fmt.get() == "New"
-    
-
-    def _new_format_kwargs(self) -> dict:
+    def _serial_number_kwargs(self) -> dict:
         
         return {
             "model": "high voltage",
@@ -120,11 +115,10 @@ class BatteryPackDummyGUI:
     def _rebuild_and_store_serial(self) -> None:
         try:
             count = self.vars.get("serial_count")
-            new_format = self._using_new_format()
-            pad = 5 if new_format else 6 #serial count increased to 6 digit (trial)
+            pad = 5
             count_str = count.get() if count is not None else "000001".zfill(pad)
             count_str = (count_str or "1").zfill(pad)
-            extra = self._new_format_kwargs() if new_format else {}
+            extra = self._serial_number_kwargs()
             serial = build_serial_number(
                 plant=self.vars["plant"].get(),
                 line=self.vars["line"].get(),
@@ -168,7 +162,6 @@ class BatteryPackDummyGUI:
             ("Plant",    "plant",    ["Jigani", "Domlur"]),
             ("Line",     "line",     ["1", "2", "3"]),
             ("Variant",  "variant",  VARIANT_OPTIONS),
-            ("Pack ID Format", "pack_id_format", ["New"]), #only new format
             ("Cell Manufacturer", "cell_mfr", CELL_MFR_OPTIONS),
         ]
 
@@ -192,7 +185,7 @@ class BatteryPackDummyGUI:
 
         row1 = ttk.Frame(config_frame) #row 1 variables
         row1.pack(fill=tk.X, pady=(0, 4))
-        configure_equal_columns(row1, 6)
+        configure_equal_columns(row1, 5)
 
         self.vars["category"] = tk.StringVar(value="Domestic")
         self._category_combo = add_category_field(row1, self.vars["category"], grid_column=0)  
@@ -223,7 +216,7 @@ class BatteryPackDummyGUI:
             self._widgets["variant"],
             self._on_variant_or_revision_change,
         )
-        for key in ("variant", "category", "plant", "line", "pack_id_format", "cell_mfr"):
+        for key in ("variant", "category", "plant", "line", "cell_mfr"):
             self.vars[key].trace_add("write", self._on_variant_or_revision_change)
 
 
@@ -232,8 +225,8 @@ class BatteryPackDummyGUI:
         serial_entry = self._widgets["serial_count"]
         serial_entry.configure(validate="key", validatecommand=(self.root.register(self._validate_serial_count), "%P"))
 
-        serial_entry.bind("<FocusOut>", self._on_serial_count_commit)
-        serial_entry.bind("<Return>", self._on_serial_count_commit)
+        serial_entry.bind("<FocusOut>", self._on_serial_count_commit) # click anywhere to submit
+        serial_entry.bind("<Return>", self._on_serial_count_commit) # click enter to submit
         serial_var.set("000001") #initial count (can be editable)
 
     def _add_field(self, parent: ttk.Frame, column: int, label: str, key: str, values: list[str] | None) -> None:
@@ -363,13 +356,6 @@ class BatteryPackDummyGUI:
         parsed = parse_module_id(m1_raw)
         return parsed.plant if parsed is not None else None
 
-    def _m1_format_is_compact(self) -> bool | None:
-        m1_raw = self._module_vars[0].get().strip()
-        if not m1_raw:
-            return None
-        parsed = parse_module_id(m1_raw)
-        return parsed.is_compact_format if parsed is not None else None
-
     def _m1_part_number(self) -> str | None:
         m1_raw = self._module_vars[0].get().strip()
         if not m1_raw:
@@ -380,7 +366,6 @@ class BatteryPackDummyGUI:
     def _clear_modules(self) -> None:
         for module_var in self._module_vars:
             module_var.set("")
-        self.vars["cell_mfr"].set("")
         self._on_variant_or_revision_change()
         self._reset_integration()
         self.preview_var.set("--Waiting for Module Integration--")
@@ -390,10 +375,10 @@ class BatteryPackDummyGUI:
         self.scan_var.set("")
 
         if result.scan_type == ScanType.SERIAL_NUMBER:
-            messagebox.showwarning("Scan", "scan module ID QR codes (M1–M4).", parent=self.root)
+            messagebox.showwarning("Scan format", " This is Serial Number, scan module IDs (M1-M4).", parent=self.root)
             return
 
-        if result.scan_type == ScanType.MODULE_ID and result.module is not None:
+        if result.scan_type == ScanType.MODULE_ID and result.module is not None: # module ids validation logic
             existing_slot = next(
                 (i for i, v in enumerate(self._module_vars) if v.get().strip() == result.raw),
                 None,
@@ -410,7 +395,7 @@ class BatteryPackDummyGUI:
             if not empty_slots:
                 messagebox.showwarning(
                     "Scan order",
-                    "All 4 modules are already scanned. clear to re scan.",
+                    "All 4 modules are already scanned. clear for next scan.",
                     parent=self.root,
                 )
                 return
@@ -423,20 +408,8 @@ class BatteryPackDummyGUI:
             m1_variant = self._m1_variant()
             m1_plant = self._m1_plant()
             m1_part_number = self._m1_part_number()
-            m1_compact_format = self._m1_format_is_compact()
             category = self.vars["category"].get().strip().lower()
 
-            if (
-                module_number > 1
-                and m1_compact_format is not None
-                and result.module.is_compact_format != m1_compact_format
-            ):
-                messagebox.showerror(
-                    "Module ID format mismatch",
-                    f"M{module_number} must use the same module ID format as M1.",
-                    parent=self.root,
-                )
-                return
             if category == "export" and incoming_variant not in variants_for_category("Export"):
                 messagebox.showerror(
                     "Variant error",
@@ -458,12 +431,7 @@ class BatteryPackDummyGUI:
                     parent=self.root,
                 )
                 return
-            if (
-                module_number > 1
-                and m1_plant is not None
-                and incoming_plant is not None
-                and incoming_plant != m1_plant
-            ):
+            if module_number > 1 and m1_plant is not None and incoming_plant != m1_plant:
                 messagebox.showerror(
                     "Plant mismatch",
                     f"M{module_number} is from {incoming_plant} but M1 is from {m1_plant}.",
@@ -493,27 +461,14 @@ class BatteryPackDummyGUI:
         variants = []
         plants: list[str] = []
         cell_mfrs: list[str] = []
-        formats: set[bool] = set()
         for mv in self._module_vars:
             p = parse_module_id(mv.get().strip())
             if p is None:
                 self._reset_integration()
                 return
             variants.append(p.variant)
-            formats.add(p.is_compact_format)
-            if p.plant is not None:
-                plants.append(p.plant)
-            if p.cell_mfr is not None:
-                cell_mfrs.append(p.cell_mfr)
-        if len(formats) > 1:
-            messagebox.showerror(
-                "Module ID format mismatch",
-                "All four modules must use the same module ID format.",
-                parent=self.root,
-            )
-            self._reset_integration()
-            return
-        compact_format = formats == {True}
+            plants.append(p.plant)
+            cell_mfrs.append(p.cell_mfr)
 
         if len(set(variants)) > 1:
             messagebox.showerror("variants mismatch", "All modules must be the same variant.", parent=self.root)
@@ -530,9 +485,8 @@ class BatteryPackDummyGUI:
             return
 
         variant = variants[0]
-        if not compact_format:
-            cell_mfr = cell_mfrs[0]
-            self.vars["cell_mfr"].set(cell_mfr)
+        cell_mfr = cell_mfrs[0]
+        self.vars["cell_mfr"].set(cell_mfr)
         serial = load_pack_serial()
         if not serial:
             self._rebuild_and_store_serial()
@@ -542,10 +496,6 @@ class BatteryPackDummyGUI:
         self._on_variant_or_revision_change()
         self.serial_number_var.set(serial)
 
-        if compact_format:
-            self._collect_extra_fields_then_print(compact_format=True)
-            return
-
         pack_qr = format_pack_qr_data(variant=variant, serial_number=serial, cell_mfr=cell_mfr)
         self.pack_qr_var.set(pack_qr)
         self.integration_status_var.set("INTEGRATION OK")
@@ -553,7 +503,7 @@ class BatteryPackDummyGUI:
         self.preview_var.set(f"QR Data: {pack_qr}")
         self._collect_extra_fields_then_print()
 
-    def _collect_extra_fields_then_print(self, *, compact_format: bool = False) -> None:
+    def _collect_extra_fields_then_print(self) -> None:
         popup = tk.Toplevel(self.root)
         popup.title("Pack Details")
         popup.resizable(False, False)
@@ -571,8 +521,6 @@ class BatteryPackDummyGUI:
         )
 
         fields = []
-        if compact_format:
-            fields.append(("Cell Manufacturer", "cell_mfr", CELL_MFR_OPTIONS))
         fields.append(("Ref No", "ref_no", None))
         local_vars: dict[str, tk.StringVar] = {}
         for row_idx, (label, key, options) in enumerate(fields, start=2):
@@ -587,30 +535,6 @@ class BatteryPackDummyGUI:
             w.grid(row=row_idx, column=1, sticky=tk.EW, pady=3)
 
         def _continue_to_print() -> None:
-            if compact_format:
-                cell_mfr = local_vars["cell_mfr"].get()
-                supported_cell_mfrs = [
-                    option
-                    for option in CELL_MFR_OPTIONS
-                    if get_type_of_reess(self.vars["variant"].get(), option) != "NA"
-                ]
-                if cell_mfr not in supported_cell_mfrs:
-                    messagebox.showwarning(
-                        "Cell Manufacturer",
-                        "Select a supported cell manufacturer to continue.",
-                        parent=popup,
-                    )
-                    return
-                self.vars["cell_mfr"].set(cell_mfr)
-                pack_qr = format_pack_qr_data(
-                    variant=self.vars["variant"].get(),
-                    serial_number=self.serial_number_var.get().strip(),
-                    cell_mfr=cell_mfr,
-                )
-                self.pack_qr_var.set(pack_qr)
-                self.integration_status_var.set("INTEGRATION OK")
-                self._integration_ok = True
-                self.preview_var.set(f"QR Data: {pack_qr}")
             for key, var in local_vars.items():
                 self.vars[key].set(var.get())
             popup.destroy()
@@ -621,6 +545,10 @@ class BatteryPackDummyGUI:
 
         def _on_skip() -> None:
             _continue_to_print()
+            
+        def _on_exit() -> None:
+            messagebox.showwarning("warning", "you cannot cancel now")
+            return
 
         btn_row = ttk.Frame(frame)
         btn_row.grid(row=len(fields) + 2, column=0, columnspan=2, sticky=tk.E, pady=(12, 0))
@@ -629,6 +557,7 @@ class BatteryPackDummyGUI:
 
         frame.columnconfigure(1, weight=1)
         popup.bind("<Return>", lambda _e: _on_ok())
+        popup.protocol("WM_DELETE_WINDOW", _on_exit())
 
         # Centre over main window
         popup.update_idletasks()
@@ -652,7 +581,7 @@ class BatteryPackDummyGUI:
         machine = get_machine_details()
         mfg_time = now.strftime("%I:%M:%S %p")
         
-        category = self.vars["category"].get().strip().lower()
+        # category = self.vars["category"].get().strip().lower()
 
         ref_no = self.vars["ref_no"].get().strip()
 
@@ -688,7 +617,7 @@ class BatteryPackDummyGUI:
         except Exception as exc:
             messagebox.showerror("Log Error", f"Could not able to write scan log:\n{exc}", parent=self.root)
         try:
-            send_dummy_scan(record)
+            send_dummy_scan(record) # client side post
         except requests.exceptions.RequestException as e:
                 print("Request failed:", e, parent=self.root)
 
@@ -705,11 +634,11 @@ class BatteryPackDummyGUI:
         dispatch_zpl(self.root, zpl, self.print_var.get(), default_name=f"pack_{serial}.zpl", printer_name=PRINTER_DUMMY)
 
         if log_saved:
-            increment_pack_serial()
-            self.root.after(_RESET_DELAY_MS, self._auto_reset)
-        else:
+            increment_pack_serial() # increament serial count after successful print and log save
+            self.root.after(_RESET_DELAY_MS, self._auto_reset) # resets essential fields after 1s
+        else: # for log save faild
             for module_var in self._module_vars:
-                module_var.set("")
+                module_var.set("") # resets label if log save failed
             self.vars["cell_mfr"].set("")
             self._on_variant_or_revision_change()
             self._reset_integration()
@@ -725,7 +654,7 @@ class BatteryPackDummyGUI:
         self._reset_integration()
         self.preview_var.set("--Waiting for Module Integration--")
         self._true_date = datetime.now().date()
-        new_serial = load_pack_serial()
+        new_serial = load_pack_serial() # new serial 
         self.serial_number_var.set(new_serial)
         _parsed = parse_serial_number(new_serial)
         if _parsed:
@@ -741,7 +670,7 @@ class BatteryPackDummyGUI:
             return
         from datetime import date as _date, datetime as _dt
         _when = None
-        year_only = False
+        # year_only = False
         for fmt in ("%d/%B/%Y", "%d %b %Y", "%d-%b-%Y", "%d/%m/%Y"):
             try:
                 _when = _dt.strptime(date_str, fmt).date()
@@ -751,7 +680,7 @@ class BatteryPackDummyGUI:
         if _when is None and date_str.isdigit() and len(date_str) == 4:
             try:
                 _when = self._true_date.replace(year=int(date_str))
-                year_only = True
+                # year_only = True
             except ValueError:
                 return
         if _when is None:
@@ -761,10 +690,9 @@ class BatteryPackDummyGUI:
         self._true_date = _when
         current = load_pack_serial()
         parsed = parse_serial_number(current) if current else None
-        new_format = self._using_new_format()
-        default_count = "1".zfill(5 if new_format else 6) # serial count increase by 1 digit (previous was 5 digits) trial
+        default_count = "1".zfill(5)
         serial_count = parsed.serial_count if parsed is not None else self.vars.get("serial_count", tk.StringVar(value=default_count)).get()
-        extra = self._new_format_kwargs() if new_format else {}
+        extra = self._serial_number_kwargs()
         try:
             new_serial = build_serial_number(
                 plant=self.vars["plant"].get(),
@@ -812,7 +740,7 @@ class BatteryPackDummyGUI:
             return True
         if not proposed.isdigit():
             return False
-        max_len = 5 if self._using_new_format() else 6 #change this for accepted serial length trial
+        max_len = 5
         return len(proposed) <= max_len
 
     def _on_serial_count_commit(self, _event: object = None) -> None:
@@ -820,9 +748,8 @@ class BatteryPackDummyGUI:
         if not raw or not raw.isdigit():
             return
 
-        new_format = self._using_new_format()
-        pad = 5 if new_format else 6 # serial count increasd by 1 digits (previous was 5 digits)
-        max_value = 999999 if new_format else 999999
+        pad = 5
+        max_value = 99999
 
         value = int(raw)
         if value < 1:
@@ -840,30 +767,17 @@ class BatteryPackDummyGUI:
 
         current = load_pack_serial()
         parsed = parse_serial_number(current) if current else None
-        extra = self._new_format_kwargs() if new_format else {}
-
-        if parsed is not None and parsed.is_new_format == new_format:
-            if new_format:
-                extra = {
-                    "model": parsed.model or "high voltage",
-                    "variant": parsed.variant or self.vars["variant"].get(),
-                    "cell_mfr": parsed.cell_mfr or self.vars["cell_mfr"].get(),
-                    "category": parsed.category or self.vars["category"].get(),
-                }
-                if not extra["cell_mfr"]:
-                    messagebox.showerror(
-                        "Cell manufacturer required",
-                        "Scan a module QR code before updating the serial count.",
-                        parent=self.root,
-                    )
-                    return
-            else:
-                extra = {}
+        if parsed is not None:
+            extra = {
+                "model": parsed.model,
+                "variant": parsed.variant,
+                "cell_mfr": parsed.cell_mfr,
+                "category": parsed.category,
+            }
             plant, line, when = parsed.plant, parsed.line, parsed.as_date
         else:
-            extra = self._new_format_kwargs() if new_format else {}
+            extra = self._serial_number_kwargs()
             plant, line, when = self.vars["plant"].get(), self.vars["line"].get(), datetime.now().date()
-
         try:
             new_serial = build_serial_number(
                 plant=plant,
@@ -885,7 +799,7 @@ class BatteryPackDummyGUI:
         if self._suppress_traces:
             return
         serial = self.serial_number_var.get().strip()
-        if len(serial) in (16, 20):
+        if len(serial) ==20 : # exact 20 digit serial number (fixed)
             self._suppress_traces = True
             try:
                 self._update_vars_from_serial(serial)
@@ -897,10 +811,10 @@ class BatteryPackDummyGUI:
             return
         serial = self.serial_number_var.get().strip()
 
-        if len(serial) not in (16, 20):
+        if len(serial)!=20:
             messagebox.showerror(
                 "Invalid serial number ",
-                "Serial number must be exactly 20 charactors (new format).",
+                "Serial number must be exactly 20 characters.",
                 parent=self.root,
             )
             self._suppress_traces = True
@@ -949,17 +863,11 @@ class BatteryPackDummyGUI:
             self.vars["plant"].set(parsed.plant)
             self.vars["line"].set(parsed.line)
             self.vars["serial_count"].set(parsed.serial_count)
-            if "pack_id_format" in self.vars:
-                self.vars["pack_id_format"].set("New" if parsed.is_new_format else "Old")
-            if parsed.is_new_format:
-                if parsed.cell_mfr:
-                    self.vars["cell_mfr"].set(parsed.cell_mfr)
-                if parsed.variant:
-                    self.vars["variant"].set(parsed.variant)
-                if parsed.category:
-                    self.vars["category"].set(parsed.category.capitalize())
+            self.vars["cell_mfr"].set(parsed.cell_mfr)
+            self.vars["variant"].set(parsed.variant)
+            self.vars["category"].set(parsed.category.capitalize())
             if "date" in self.vars:
-                if is_export:
+                if is_export: # date format for export
                     self.vars["date"].set(parsed.as_date.strftime("%z %b %Y")) # oct 2026
                     # self.vars["date"].set(str(parsed.year)) # 2026
                 else:
@@ -1005,7 +913,7 @@ class BatteryPackDummyGUI:
             if key == "date":
                 if isinstance(widget, ttk.Entry):
                     widget.configure(state="readonly") 
-                    # set_entry_enabled(widget, True)
+                    # set_entry_enabled(widget, True) # uncomment to make date editable to everyone
                 continue #editable to none
             
             if isinstance(widget, ttk.Combobox):

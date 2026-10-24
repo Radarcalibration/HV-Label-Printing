@@ -1,70 +1,25 @@
- 
-
 import hashlib
 import json
 import secrets
 import sqlite3
 
-from common.paths import get_common_base_dir
 from common.storage import connect_db
 
-USERS_FILE = get_common_base_dir() / "common" / "data" / "users.json"
 
 ROLE_ADMIN = "admin"
 ROLE_OPERATOR = "operator"
 ROLES = (ROLE_ADMIN, ROLE_OPERATOR)
 
 MIN_PASSWORD_LENGTH = 6
-_USERS_MIGRATION = "users_json_v1"
 
 
 def _hash_password(password: str, salt: str) -> str:
     return hashlib.sha256(f"{salt}:{password}".encode("utf-8")).hexdigest()
 
 
-def _import_legacy_users(connection: sqlite3.Connection) -> None:
-    if connection.execute(
-        "SELECT 1 FROM storage_migrations WHERE name = ?", (_USERS_MIGRATION,)
-    ).fetchone():
-        return
-
-    if not USERS_FILE.exists():
-        connection.execute(
-            "INSERT INTO storage_migrations(name) VALUES (?)", (_USERS_MIGRATION,)
-        )
-        return
-
-    try:
-        with USERS_FILE.open(encoding="utf-8") as file:
-            data = json.load(file)
-    except (json.JSONDecodeError, OSError, UnicodeDecodeError):
-        return
-
-    if isinstance(data, dict):
-        for username, record in data.items():
-            if not isinstance(username, str) or not isinstance(record, dict):
-                continue
-            salt = record.get("salt")
-            password_hash = record.get("password_hash")
-            role = record.get("role", ROLE_OPERATOR)
-            if not all(isinstance(value, str) for value in (salt, password_hash, role)):
-                continue
-            connection.execute(
-                """
-                INSERT OR IGNORE INTO users(username, salt, password_hash, role)
-                VALUES (?, ?, ?, ?)
-                """,
-                (username, salt, password_hash, role),
-            )
-
-    connection.execute(
-        "INSERT INTO storage_migrations(name) VALUES (?)", (_USERS_MIGRATION,)
-    )
-
-
 def _seed_default_admin_if_empty(connection: sqlite3.Connection) -> None:
     connection.execute("BEGIN IMMEDIATE")
-    _import_legacy_users(connection)
+    
     if not connection.execute("SELECT 1 FROM users LIMIT 1").fetchone():
         salt = secrets.token_hex(16)
         connection.execute(
@@ -113,7 +68,6 @@ def list_users() -> list[tuple[str, str]]:
 def get_user_role(username: str) -> str | None:
     with connect_db() as connection:
         connection.execute("BEGIN IMMEDIATE")
-        _import_legacy_users(connection)
         record = connection.execute(
             "SELECT role FROM users WHERE username = ?", (username,)
         ).fetchone()
@@ -134,7 +88,6 @@ def add_user(username: str, password: str, role: str = ROLE_OPERATOR) -> tuple[b
     salt = secrets.token_hex(16)
     with connect_db() as connection:
         connection.execute("BEGIN IMMEDIATE")
-        _import_legacy_users(connection)
         if username.lower() in {
             row["username"].lower()
             for row in connection.execute("SELECT username FROM users")
@@ -159,7 +112,6 @@ def delete_user(username: str, *, current_user: str) -> tuple[bool, str]:
     username = username.strip()
     with connect_db() as connection:
         connection.execute("BEGIN IMMEDIATE")
-        _import_legacy_users(connection)
         record = connection.execute(
             "SELECT role FROM users WHERE username = ?", (username,)
         ).fetchone()
