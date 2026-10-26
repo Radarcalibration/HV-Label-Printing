@@ -84,7 +84,7 @@ def _protection(password: str, enabled: bool = True) -> SheetProtection:
 
 
 def _build_header(ws, excel_password: str) -> None:
-    for col_name in COLUMNS:
+    for col_idx, col_name in enumerate(COLUMNS, start=1):
         cell = ws.cell(row=1, column=col_idx, value=col_name)
         cell.font = HEADER_FONT
         cell.fill = HEADER_FILL
