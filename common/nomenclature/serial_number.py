@@ -62,6 +62,15 @@ NEW_SERIAL_NUMBER_PATTERN = re.compile(
     r"(?P<category>[12])(?P<cell_mfr>[P-U])(?P<serial_count>\d{5})$"
 )
 
+# for new serial count logic, 99999- A0000, Z9999- AA000, ZZ999- AAA00 and so on total (7,363,359 possible counts)
+# NEW_SERIAL_NUMBER_PATTERN = re.compile(
+#     r"^(?P<plant>[ABC])(?P<model>[ABCD])(?P<variant>A[3-6])(?P<line>[123])"
+#     r"(?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})"
+#     r"(?P<category>[12])(?P<cell_mfr>[P-U])"
+#     r"(?P<serial_count>[A-Z]{0,4}\d{1,5})$"
+# )
+
+
 
 @dataclass(frozen=True)
 class ParsedSerialNumber:
@@ -132,6 +141,17 @@ def build_serial_number(
         raise ValueError("Serial count cannot exceed 99999.")
     count = count_digits.zfill(5)
 
+    # count = (serial_count or "").strip().upper()
+
+    # if not re.fullmatch(r"[A-Z]{0,4}\d{1,5}", count):
+    #     raise ValueError(
+    #         "Invalid serial count format."
+    #     )
+    # if len(count) != 5:
+    #     raise ValueError(
+    #         "Serial count must be exactly 5 characters."
+    #     )
+        
     return (
         f"{NEW_PLANT_CODES[plant_key]}"
         f"{MODEL_CODES[model_key]}"

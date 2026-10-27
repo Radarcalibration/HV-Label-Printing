@@ -287,7 +287,6 @@ class BatteryPackIdGUI:
         self.serial_number_var.set("--Waiting for Scan--")
         self._param_labels["model_number"].configure(text="NA")
         
-        
 
     def _on_scan(self, raw: str) -> None:
         if not raw:
@@ -307,7 +306,7 @@ class BatteryPackIdGUI:
             self.scanner_var.set("")  
             self.serial_number_var.set(result.serial.raw)
             self.cell_mfr_var.set(result.cell_mfr)
-            self.category_var.set(result.serial.category.capitalize())
+            self.category_var.set(result.serial.category.capitalize()) # set the category var in config rows from scanned dummy id and vica versa.
             
             if result.pack_variant:
                 self.variant_var.set(result.pack_variant)

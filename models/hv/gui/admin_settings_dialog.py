@@ -67,36 +67,79 @@ class AdminSettingsDialog(tk.Toplevel):
         }
 
         machine = get_machine_details()
-        
+
         self._machine_name = tk.StringVar(value=machine["machine_name"])
         self._machine_id = tk.StringVar(value=machine["machine_id"])
-        
-        
-        ttk.Label(form, text="Machine Name:").grid(row=5, column=0, sticky=tk.W, padx=(0, 10), pady=6)
-        ttk.Entry(form, textvariable=self._machine_name).grid(row=5, column=1, sticky=tk.EW, pady=6)
-        
-        ttk.Label(form, text="Machine ID:").grid(row=5, column=2, sticky=tk.W, padx=(0, 10), pady=6)
-        ttk.Entry(form, textvariable=self._machine_id).grid(row=5, column=3, sticky=tk.EW, pady=6)
-        
-        ttk.Label(form, text="Dummy API URL:").grid(row=0, column=0, sticky=tk.W, padx=(0, 10), pady=6)
-        ttk.Entry(form, textvariable=self._dummy_api_url_var).grid(row=0, column=1, sticky=tk.EW, pady=6)
-        
-        ttk.Label(form, text="Dummy API KEY:").grid(row=0, column=2, sticky=tk.W, padx=(0, 10), pady=6)
-        ttk.Entry(form, textvariable=self._dummy_api_key_var, show="*").grid(row=0, column=3, sticky=tk.EW, pady=6)
-        
+
+        ttk.Label(
+            form,
+            text="Machine Name:"
+        ).grid(row=5, column=0, sticky=tk.W, padx=(0, 10), pady=6)
+
+        ttk.Entry(
+            form,
+            textvariable=self._machine_name
+        ).grid(row=5, column=1, sticky=tk.EW, pady=6)
+
+        ttk.Label(
+            form,
+            text="Machine ID:"
+        ).grid(row=5, column=2, sticky=tk.W, padx=(0, 10), pady=6)
+
+        ttk.Entry(
+            form,
+            textvariable=self._machine_id
+        ).grid(row=5, column=3, sticky=tk.EW, pady=6)
+
+        ttk.Label(
+            form,
+            text="Dummy API URL:"
+        ).grid(row=0, column=0, sticky=tk.W, padx=(0, 10), pady=6)
+
+        ttk.Entry(
+            form,
+            textvariable=self._dummy_api_url_var
+        ).grid(row=0, column=1, sticky=tk.EW, pady=6)
+
+        ttk.Label(
+            form,
+            text="Dummy API KEY:"
+        ).grid(row=0, column=2, sticky=tk.W, padx=(0, 10), pady=6)
+
+        ttk.Entry(
+            form,
+            textvariable=self._dummy_api_key_var,
+            show="*"
+        ).grid(row=0, column=3, sticky=tk.EW, pady=6)
+
         ttk.Checkbutton(
             form,
             text="Enable server call",
             variable=self._api_call_vars["dummy"],
             command=lambda: self._save_api_call_setting("dummy"),
         ).grid(row=0, column=4, sticky=tk.W, padx=(10, 0), pady=6)
-        
-        ttk.Label(form, text="Pack ID API URL:").grid(row=1, column=0, sticky=tk.W, padx=(0, 10), pady=6)
-        ttk.Entry(form, textvariable=self._pack_id_api_url_var).grid(row=1, column=1, sticky=tk.EW, pady=6)
 
-        ttk.Label(form, text="Pack ID API KEY:").grid(row=1, column=2, sticky=tk.W, padx=(0, 10), pady=6)
-        ttk.Entry(form, textvariable=self._pack_id_api_key_var, show="*").grid(row=1, column=3, sticky=tk.EW, pady=6)
-        
+        ttk.Label(
+            form,
+            text="Pack ID API URL:"
+        ).grid(row=1, column=0, sticky=tk.W, padx=(0, 10), pady=6)
+
+        ttk.Entry(
+            form,
+            textvariable=self._pack_id_api_url_var
+        ).grid(row=1, column=1, sticky=tk.EW, pady=6)
+
+        ttk.Label(
+            form,
+            text="Pack ID API KEY:"
+        ).grid(row=1, column=2, sticky=tk.W, padx=(0, 10), pady=6)
+
+        ttk.Entry(
+            form,
+            textvariable=self._pack_id_api_key_var,
+            show="*"
+        ).grid(row=1, column=3, sticky=tk.EW, pady=6)
+
         ttk.Checkbutton(
             form,
             text="Enable server call",
@@ -104,12 +147,27 @@ class AdminSettingsDialog(tk.Toplevel):
             command=lambda: self._save_api_call_setting("pack_id"),
         ).grid(row=1, column=4, sticky=tk.W, padx=(10, 0), pady=6)
 
-        ttk.Label(form, text="BMS API URL:").grid(row=2, column=0, sticky=tk.W, padx=(0, 10), pady=6)
-        ttk.Entry(form, textvariable=self._bms_api_url_var).grid(row=2, column=1, sticky=tk.EW, pady=6)
+        ttk.Label(
+            form,
+            text="BMS API URL:"
+        ).grid(row=2, column=0, sticky=tk.W, padx=(0, 10), pady=6)
 
-        ttk.Label(form, text="BMS API KEY:").grid(row=2, column=2, sticky=tk.W, padx=(0, 10), pady=6)
-        ttk.Entry(form, textvariable=self._bms_api_key_var, show="*").grid(row=2, column=3, sticky=tk.EW, pady=6)
-        
+        ttk.Entry(
+            form,
+            textvariable=self._bms_api_url_var
+        ).grid(row=2, column=1, sticky=tk.EW, pady=6)
+
+        ttk.Label(
+            form,
+            text="BMS API KEY:"
+        ).grid(row=2, column=2, sticky=tk.W, padx=(0, 10), pady=6)
+
+        ttk.Entry(
+            form,
+            textvariable=self._bms_api_key_var,
+            show="*"
+        ).grid(row=2, column=3, sticky=tk.EW, pady=6)
+
         ttk.Checkbutton(
             form,
             text="Enable server call",
@@ -117,52 +175,124 @@ class AdminSettingsDialog(tk.Toplevel):
             command=lambda: self._save_api_call_setting("bms"),
         ).grid(row=2, column=4, sticky=tk.W, padx=(10, 0), pady=6)
 
-        form.columnconfigure(3, weight=1)
+        self._status_label = ttk.Label(
+            form,
+            text="Pending",
+            foreground="red",
+        )
 
-        ttk.Button(form, text="Save", command=self.save_all_settings).grid(row=10, column=4, sticky=tk.E, pady=(10, 0))
+        self._status_label.grid(
+            row=10,
+            column=0,
+            columnspan=2,
+            sticky=tk.W,
+            pady=(10, 0),
+        )
 
-    
-    def save_all_settings(self):
-        self.save_api_urls_button()
-        self.save_api_keys_button()
-        self.save_machine_details_button()
+        ttk.Button(
+            form,
+            text="Save",
+            command=self.save_all_settings,
+        ).grid(
+            row=10,
+            column=4,
+            sticky=tk.E,
+            pady=(10, 0),
+        )
 
-    def save_machine_details_button(self) -> None:
+    def save_all_settings(self) -> None:
+
+        if not self.save_api_urls_button():
+            self._status_label.config(
+                text="Pending",
+                foreground="red",
+            )
+            return
+
+        if not self.save_api_keys_button():
+            self._status_label.config(
+                text="Pending",
+                foreground="red",
+            )
+            return
+
+        if not self.save_machine_details_button():
+            self._status_label.config(
+                text="Pending",
+                foreground="red",
+            )
+            return
+
+        self._status_label.config(
+            text="All Parameters Saved",
+            foreground="green",
+        )
+
+        messagebox.showinfo(
+            "Success",
+            "All parameters have been saved successfully.",
+            parent=self,
+        )
+
+    def save_machine_details_button(self) -> bool:
         try:
-            save_machine_details(self._machine_name.get(), self._machine_id.get())
+            save_machine_details(
+                self._machine_name.get(),
+                self._machine_id.get(),
+            )
+            return True
+
         except Exception as exc:
             messagebox.showerror(
-                "Save error", f"Could not save machine details:\n{exc}", parent=self)
-            return
-        messagebox.showinfo(
-            "Machine details saved",
-            "Machine name and ID have been updated.",
-            parent=self,)
-                
-    def _save_api_call_setting(self, endpoint: str) -> None:
-        set_api_call_enabled(endpoint, self._api_call_vars[endpoint].get())
+                "Save error",
+                f"Could not save machine details:\n{exc}",
+                parent=self,
+            )
+            return False
 
-    def save_api_urls_button(self) -> None:
+    def _save_api_call_setting(self, endpoint: str) -> None:
+        set_api_call_enabled(
+            endpoint,
+            self._api_call_vars[endpoint].get(),
+        )
+
+    def save_api_urls_button(self) -> bool:
+
         dummy_url = self._dummy_api_url_var.get().strip()
         pack_id_url = self._pack_id_api_url_var.get().strip()
         bms_url = self._bms_api_url_var.get().strip()
-        if not all(map(is_valid_api_url, (dummy_url, pack_id_url, bms_url))):
+
+        if not all(
+            map(
+                is_valid_api_url,
+                (dummy_url, pack_id_url, bms_url),
+            )
+        ):
             messagebox.showerror(
                 "Invalid API URL",
                 "Enter a valid URL beginning with http:// or https:// for all endpoints.",
-                parent=self,)
-            return
+                parent=self,
+            )
+            return False
 
         try:
-            save_api_urls(dummy_url, pack_id_url, bms_url)
+            save_api_urls(
+                dummy_url,
+                pack_id_url,
+                bms_url,
+            )
+            return True
+
         except Exception as exc:
             messagebox.showerror(
-                "Save error", f"Could not save API URLs:\n{exc}", parent=self)
-            return
-        messagebox.showinfo(
-            "API URLs saved", "The API endpoints have been updated.", parent=self)
+                "Save error",
+                f"Could not save API URLs:\n{exc}",
+                parent=self,
+            )
+            return False
 
-    def save_api_keys_button(self) -> None:
+    def save_api_keys_button(self) -> bool:
+
         endpoint_settings = {
             "dummy": (
                 self._dummy_api_url_var.get().strip(),
@@ -177,37 +307,43 @@ class AdminSettingsDialog(tk.Toplevel):
                 self._bms_api_key_var.get().strip(),
             ),
         }
+
         enabled = {
             endpoint: variable.get()
             for endpoint, variable in self._api_call_vars.items()
         }
 
         for endpoint, (url, key) in endpoint_settings.items():
+
             if not enabled[endpoint]:
                 continue
+
             if not is_valid_api_url(url) or not is_valid_api_key(key):
                 messagebox.showerror(
                     "Invalid API settings",
                     f"Enter a valid URL and API key for the enabled {endpoint} endpoint.",
                     parent=self,
                 )
-                return
+                return False
+
             try:
                 key_matches = validate_api_key(url, key)
+
             except RequestException as exc:
                 messagebox.showerror(
                     "API key validation failed",
                     f"Could not validate the {endpoint} API key:\n{exc}",
                     parent=self,
                 )
-                return
+                return False
+
             if not key_matches:
                 messagebox.showerror(
                     "Invalid API keys",
                     f"The {endpoint} API key does not match the server key.",
                     parent=self,
                 )
-                return
+                return False
 
         try:
             save_api_keys(
@@ -215,15 +351,23 @@ class AdminSettingsDialog(tk.Toplevel):
                 endpoint_settings["pack_id"][1],
                 endpoint_settings["bms"][1],
             )
+            return True
+
         except Exception as exc:
             messagebox.showerror(
-                "Save error", f"Could not save API keys:\n{exc}", parent=self
+                "Save error",
+                f"Could not save API keys:\n{exc}",
+                parent=self,
             )
-            return
-        messagebox.showinfo(
-            "API keys saved", "The API keys have been updated.", parent=self
-        )
+            return False
 
 
-def open_admin_settings(parent: tk.Misc, *, current_user: str) -> None:
-    AdminSettingsDialog(parent, current_user=current_user)
+def open_admin_settings(
+    parent: tk.Misc,
+    *,
+    current_user: str,
+) -> None:
+    AdminSettingsDialog(
+        parent,
+        current_user=current_user,
+    )
