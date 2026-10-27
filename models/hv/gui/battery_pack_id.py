@@ -231,7 +231,7 @@ class BatteryPackIdGUI:
             serial_number=serial_number,
             rated_capacity=self._param_value("rated_capacity"),
             max_voltage=self._param_value("max_voltage"),
-            model_number=self._param_value("model_number"),
+            type_of_reess=self._param_value("model_number"),
             tac_number=self._param_value("tac_number"),
             variant=self.variant_var.get(),
             category=category,
@@ -286,6 +286,7 @@ class BatteryPackIdGUI:
         self.cell_mfr_var.set("--Waiting for Scan--")
         self.serial_number_var.set("--Waiting for Scan--")
         self._param_labels["model_number"].configure(text="NA")
+        
         
 
     def _on_scan(self, raw: str) -> None:

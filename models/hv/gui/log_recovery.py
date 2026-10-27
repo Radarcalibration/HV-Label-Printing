@@ -27,9 +27,7 @@ def show_log_recovery_dialog(
     )
     frame = ttk.Frame(dialog, padding=16)
     frame.pack(fill=tk.BOTH, expand=True)
-    ttk.Label(frame, textvariable=message, justify=tk.LEFT, wraplength=480).pack(
-        fill=tk.X, pady=(0, 14)
-    )
+    ttk.Label(frame, textvariable=message, justify=tk.LEFT, wraplength=480).pack(fill=tk.X, pady=(0, 14))
 
     def _retry() -> None:
         try:
@@ -50,10 +48,6 @@ def show_log_recovery_dialog(
 
     buttons = ttk.Frame(frame)
     buttons.pack(fill=tk.X)
-    ttk.Button(buttons, text="Acknowledge & Continue", command=_continue).pack(
-        side=tk.RIGHT
-    )
-    ttk.Button(buttons, text="Retry Log Save", command=_retry).pack(
-        side=tk.RIGHT, padx=(0, 8)
-    )
+    ttk.Button(buttons, text="Acknowledge & Continue", command=_continue).pack(side=tk.RIGHT)
+    ttk.Button(buttons, text="Retry Log Save", command=_retry).pack(side=tk.RIGHT, padx=(0, 8))
     dialog.protocol("WM_DELETE_WINDOW", lambda: None)

@@ -1,4 +1,3 @@
- 
 """Pack serial QR format: VX156060:ABA51202605281U00139 """
 
 import re
@@ -36,8 +35,7 @@ class ScanResult:
     serial: ParsedSerialNumber | None = None
     module: ParsedModuleId | None = None
     bmb_cmb: object | None = None  
-    pack_variant: str | None = None 
-    pack_revision: str | None = None  
+    pack_variant: str | None = None  
     cell_mfr: str | None = None
 
 
@@ -60,7 +58,6 @@ def identify_scan(value: str) -> ScanResult:
                 scan_type=ScanType.SERIAL_NUMBER,
                 serial=serial,
                 pack_variant=variant,
-                pack_revision=None,
                 cell_mfr=get_cell_mfr_from_reess(reess_part),
             )
 

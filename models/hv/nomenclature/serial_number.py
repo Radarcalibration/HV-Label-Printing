@@ -1,5 +1,3 @@
- 
-
 from common.nomenclature.serial_number import (
     CELL_MFR_BY_CODE_NEW,
     CELL_MFR_CODES_NEW,

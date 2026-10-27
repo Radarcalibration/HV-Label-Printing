@@ -1,13 +1,10 @@
-_LEFT_MARGIN  = 60
-
-
 def _header(pw: int, ll: int) -> str:
     return (
         f"^XA\n"
         f"^CI28\n"
         f"^PW{pw}\n"
         f"^LL{ll}\n"
-        f"^LH{_LEFT_MARGIN},18\n"
+        f"^LH60,18\n"
     )
 
 
@@ -17,84 +14,6 @@ def _footer(quantity: int = 1) -> str:
 
 def _fd(text: str) -> str:
     return str(text).replace("^", "").replace("~", "")
-
-
-def build_hv_pack_label_domestic(
-    *,
-    module_id: str,
-    variant: str,
-    model_number: str,
-    type_of_reess: str,
-    rated_capacity: str,
-    tac_number: str,
-    mfg_date: str,
-) -> str:
-    b = _header(1200, 600)
-
-    b += f"^FO20,40^BQN,2,6^FDQA,{_fd(module_id)}^FS\n"
-
-    b += f"^FO300,40^A0N,28,30^FDVariant: {_fd(variant)}^FS\n"
-    b += f"^FO300,80^A0N,28,30^FDPart Number: {_fd(model_number)}^FS\n"
-    b += f"^FO300,120^A0N,28,30^FDType of REESS: {_fd(type_of_reess)}^FS\n"
-    b += f"^FO300,160^A0N,28,30^FDRated Capacity: {_fd(rated_capacity)}^FS\n"
-    b += f"^FO300,240^A0N,28,30^FDTAC Number: {_fd(tac_number)}^FS\n"
-    b += f"^FO300,280^A0N,28,30^FDMfg Date: {_fd(mfg_date)}^FS\n"
-    b += f"^FO300,320^A0N,28,30^FDMade in India^FS\n"
-    b += f"^FO300,380^A0N,24,26^FD{_fd(module_id)}^FS\n"
-
-    b += _footer()
-    return b
-
-
-def build_bmb_cmb_combined_zpl(*, bmb_serial: str, cmb_serial: str, pack_qr_data: str = "") -> str:
-    b = _header(720, 420)
-    if pack_qr_data:
-        b += f"^FO20,80^A0N,25,23^FDPack ID: {_fd(pack_qr_data)}^FS\n"
-    b += "^FO160,20^A0N,30,32^FDBMS DATA^FS\n"
-    b += "^FO160,55^GB150,3,3^FS\n"
-    b += f"^FO20,100^BQN,2,5^FDQA,B_{(bmb_serial)}, C_{(cmb_serial)}^FS\n"
-    b += f"^FO160,140^A0N,25,25^FDBMB ID: {_fd(bmb_serial)}^FS\n"
-    b += f"^FO160,180^A0N,25,25^FDCMB ID: {_fd(cmb_serial)}^FS\n"
-    b += _footer(2)
-    return b
-
-
-def build_bmb_cmb_zpl(*, kind: str, value: str, pack_qr_data: str = "") -> str:
-    b = _header(600, 300)
-    b += f"^FO00,120^BQN,2,8^FDQA,{_fd(value)}^FS\n"
-    b += f"^FO160,35^A0N,37,39^FD{_fd(kind)} DATA^FS\n"
-    b += f"^FO160,70^GB170,3,3^FS\n"
-    if pack_qr_data:
-        b += f"^FO00,90^A0N,27,28^FDPack ID: {_fd(pack_qr_data[:31])}^FS\n"
-        y = 150
-    else:
-        y = 140
-    b += f"^FO185,{y}^A0N,30,32^FD{_fd(kind)} ID: {_fd(value)}^FS\n"
-    b += _footer(2)
-    return b
-
-
-def build_pack_qr_zpl(
-    *,
-    pack_qr_data: str,
-    model_number: str,
-    serial_number: str,
-    tac_number: str,
-    tac_label: str = "TAC Number",
-    mfg_date: str,
-) -> str:
-    b = _header(720, 360)
-    b += f"^FO240,10^BQN,2,4^FDQA,{_fd(pack_qr_data)}^FS\n"
-    b += f"^FO90,130^A0N,26,25^FDModel Number: {_fd(model_number)}^FS\n"
-    b += f"^FO90,165^A0N,26,25^FDSerial Number: {_fd(serial_number)}^FS\n"
-    y = 200
-    if tac_number:
-        b += f"^FO90,{y}^A0N,26,25^FD{_fd(tac_label)}: {_fd(tac_number)}^FS\n"
-        y += 35
-    mfg_label = "Mfg Date" if len(mfg_date) > 4 else "Mfg Year"
-    b += f"^FO90,{y}^A0N,26,25^FD{mfg_label}: {_fd(mfg_date)}^FS\n"
-    b += _footer(2)
-    return b
 
 
 def build_hv_dummy_id_zpl(
@@ -115,12 +34,12 @@ def build_hv_dummy_id_zpl(
     if tac_number:
         b += f"^FO90,{y}^A0N,26,25^FD{_fd(tac_label)}: {_fd(tac_number)}^FS\n"
         y += 35
-    mfg_label = "Mfg Year" if category.strip().lower() == "export" else "Mfg Date"
+    mfg_label = "Mfg Year" if category.lower() == "export" else "Mfg Date"
     b += f"^FO90,{y}^A0N,26,25^FD{mfg_label}: {_fd(mfg_value)}^FS\n"
     return b + _footer(2)
 
 
-def build_battery_pack_id_zpl_unified(
+def build_hv_pack_id_zpl(
     *,
     rated_capacity: str,
     max_voltage: str,
@@ -134,13 +53,24 @@ def build_battery_pack_id_zpl_unified(
     qr_data: str,
     category: str = "Domestic",
 ) -> str:
+    rated_capacity=rated_capacity,
+    max_voltage=max_voltage,
+    type_of_reess=type_of_reess,
+    serial_number=serial_number,
+    tac_number=tac_number,
+    emark_res=emark_res,
+    srb_code=srb_code,
+    made_in=made_in,
+    mfg_date_new=mfg_date_new,
+    qr_data=qr_data,
+    category=category,
     b = _header(1100, 600)
     
     b += f"^FO150,104^A@N,24,24,E:BRUTALTYPE-BLACK.TTF^FDRATED CAPACITY: {rated_capacity}^FS\n"
     b += f"^FO150,132^A@N,24,24,E:BRUTALTYPE-BLACK.TTF^FDMAXIMUM VOLTAGE: {(max_voltage)}^FS\n"
     b += f"^FO150,180^A@N,24,24,E:BRUTALTYPE-MEDIUM.TTF^FDMODEL NUMBER:{_fd(type_of_reess)}^FS\n"
     b += f"^FO150,208^A@N,24,24,E:BRUTALTYPE-MEDIUM.TTF^FDSERIAL NUMBER: {_fd(serial_number)}^FS\n"
-    if category.strip().lower() == "export":
+    if category == "export":
         y=274
     else:
         b += f"^FO150,236^A@N,24,24,E:BRUTALTYPE-MEDIUM.TTF^FDTAC NUMBER: {_fd(tac_number)}^FS\n"
@@ -156,7 +86,7 @@ def build_battery_pack_id_zpl_unified(
     b += f"^FO540,304^BQN,2,5^FDQA,{_fd(qr_data)}^FS\n"
 
     if made_in: # (165x40)px made in India MFG.
-        if category.strip().lower() == "export":
+        if category == "export":
             b += f"^FO333,395^GFA,840,840,21,F81F01F01HF01HFE01F1F0F803C3C1E1HF01F01FH0F81F01F01HFC1HFE01F1F0F803C3E1E1HFC1F03FH0FC3F03F81HFE1HFE01F1F8F803C3E1E1HFE1F03FH0FC3F03F81IF1HFE01F1F8F803C3F1E1IF1F03F80FE7F03F81F3F1FI01F1FCF803C3F9E1E3F1F07F80HF7F07FC1F0F9FI01F1FEF803C3F9E1E1F1F07F80JF07FC1F0F9FI01F1FEF803C3FDE1E1F1F07FC0JF07BC1F0F9HFC01F1IF803C3FDE1E1F1F0HFC0JF0FBE1F0F9HFC01F1IF803C3HFE1E1F1F0FBC0JF0FBE1F0F9HFC01F1IF803C3HFE1E1F1F0F3E0FBHF0IF1F0F9HFC01F1F7F803C3DFE1E1F1F1HFE0FBDF1IF1F0F9FI01F1F7F803C3CFE1E1F1F1IF0F81F1IF1F1F1FI01F1F3F803C3CFE1E1F1F1IF0F81F1IF9IF1HFE01F1F3F803C3C7E1IF1F3IF0F81F3E0F9IF1HFE01F1F1F803C3C7E1HFE1F3E0F8F81F3E0F9HFE1HFE01F1F0F803C3C3E1HFE1F7C0F8F81F3C079HF81HFE01F1F0F803C3C1E1HF81F7C0F8,::::::N03gS0F01C7FE1FEI0703DHF81C07FEV0F03C7FE3HFI07839HF81E07HFV0F87C7FE7DFI03879HF83E07HFV0F87C7H07078H03C71CH03F070718T0FCFC7H07078H01CF1CH07F07073CT0FEFC7H07K01FE1CH0H707073CT0EFDC7FC7L0FC1HF0H7870F3CT0EFDC7FC71F8I07C1HF0F387HFV0E79C7FC71F8I0781HF0E3C7FEV0E39C7H07078I0381CH0HFC71CV0E01C7H07078I0381C01HFC71EV0E01C7H07878CH0381C01C1E70E18T0E01C7H07HF9EH0381HFBC0E70F3CT0E01C7H03HF9EH0381HFB80E7073CT0E01C7H01FH9EH0381HFB80E707BCT0^FS\n"
             b += f"^FO448,420^A@N,22,22,E:BRUTALTYPE-BLACK.TTF^FD{_fd(mfg_date_new)}^FS\n"
         else:  
@@ -180,6 +110,18 @@ def build_battery_pack_id_zpl_unified(
 #     qr_data: str,
 #     category: str = "Domestic",
 # ) -> str:
+
+#     rated_capacity=rated_capacity,
+#     max_voltage=max_voltage,
+#     type_of_reess=type_of_reess,
+#     serial_number=serial_number,
+#     tac_number=tac_number,
+#     emark_res=emark_res,
+#     srb_code=srb_code,
+#     made_in=made_in,
+#     mfg_date_new=mfg_date_new,
+#     qr_data=qr_data,
+#     category=category,
 #     b = _header(1100, 600)
     
 #     b += f"^FO150,104^A@N,24,24,E:BRUTALTYPE-BLACK.TTF^FDRATED CAPACITY: {rated_capacity}^FS\n"
@@ -213,80 +155,20 @@ def build_battery_pack_id_zpl_unified(
 #     return b
 
 
-
-def build_hv_pack_id_zpl(
-    *,
-    rated_capacity: str,
-    max_voltage: str,
-    type_of_reess: str,
-    serial_number: str,
-    tac_number: str,
-    emark_res: str,
-    srb_code: str,
-    made_in: str,
-    mfg_value: str,
-    qr_data: str,
-    category: str,
-) -> str:
-    return build_battery_pack_id_zpl_unified(
-        rated_capacity=rated_capacity,
-        max_voltage=max_voltage,
-        type_of_reess=type_of_reess,
-        serial_number=serial_number,
-        tac_number=tac_number,
-        emark_res=emark_res,
-        srb_code=srb_code,
-        made_in=made_in,
-        mfg_date_new=mfg_value,
-        qr_data=qr_data,
-        category=category,
-    )
-
-
 def build_hv_bms_id_zpl(*, bmb_serial: str, cmb_serial: str, pack_qr_data: str = "") -> str:
-    return build_bmb_cmb_combined_zpl(
-        bmb_serial=bmb_serial,
-        cmb_serial=cmb_serial,
-        pack_qr_data=pack_qr_data,
-    )
-
-
-def build_hv_pack_label_export(
-    *,
-    rated_capacity: str,
-    max_voltage: str,
-    type_of_reess: str,
-    serial_number: str,
-    tac_number: str,
-    emark_res: str,
-    srb_code: str,
-    made_in: str,
-    mfg_year: str, # yyyy format
-    qr_data: str,
-) -> str:
-    b = _header(1100, 600)
+    bmb_serial=bmb_serial,
+    cmb_serial=cmb_serial,
+    pack_qr_data=pack_qr_data,
     
-    b += f"^FO150,104^A@N,24,24,E:BRUTALTYPE-BLACK.TTF^FDRATED CAPACITY: {rated_capacity}^FS\n"
-    b += f"^FO150,132^A@N,24,24,E:BRUTALTYPE-BLACK.TTF^FDMAXIMUM VOLTAGE: {(max_voltage)}^FS\n"
-    b += f"^FO150,180^A@N,24,24,E:BRUTALTYPE-MEDIUM.TTF^FDMODEL NUMBER:{_fd(type_of_reess)}^FS\n"
-    b += f"^FO150,208^A@N,24,24,E:BRUTALTYPE-MEDIUM.TTF^FDSERIAL NUMBER: {_fd(serial_number)}^FS\n"
-    b += f"^FO150,236^A@N,24,24,E:BRUTALTYPE-MEDIUM.TTF^FDTAC NUMBER: {_fd(tac_number)}^FS\n"
-    
-    b += f"^FO150,407^A@N,38,41,E:BRUTALTYPE-BLACK.TTF^FD{_fd(srb_code)}^FS\n"
-    
-    b += "^FO150,274^A@N,24,24,E:BRUTALTYPE-BLACK.TTF^FDSECONDARY LITHIUM ION BATTERY^FS\n"
-
-    b += f"^FO150,302^GFA,880,880,11,N01HFCP0M03JFEO0L01LFCN0L07MF8M0K03NFEM0K07HF8I07HF8L0J01HF8K0HFCL0J07FCL01HFL0J0HFN07F8K0I01FEN01FCK0I03F8O0HFK0I07EP03F8J0I0FCP01FCJ0H01F8Q0FCJ0H03FR07EJ0H07ER03FJ0H0FCR01F8I0H0F8S0FCI001FT07CI003FT03EI003ET03FI007CT01FI007C07KF8M0F8H00F807KF8M0F8H00F807KF8M07CH01FH07KF8M07CH01FH07KF8M03CH01EH07KF8M03EH03EH07KF8M03EH03EH07F8Q01EH03CH07F8Q01FH07CH07F8Q01FH07CH07F8K03H01801FH07CH07F8K0FH078H0FH078H07F8J01FH0F8H0FH078H07F8J07F03F8H0FH078H07F8J0HF07F8H0F8078H07JFE0HF07F8H0F80:78H07JFE01FH0F8H0F80:::78H07JFC01FH0F8H0F8078H07F8J01FH0F8H0F8078H07F8J01FH0F8H0FH07CH07F8J01FH0F8H0FH0:7CH07F8J01FH0F801FH03CH07F8J01FH0F801FH03CH07F8J01FH0F801EH03EH07KF81FH0F803EH0:1FH07KF81FH0F803CH01FH07KF81FH0F807CH00FH07KF81FH0F807CH00F807KF81FH0F80F8H0:07CT01FI007ET01FI003ET03EI001FT07EI001F8S0FCI0H0FCS0F8I0H07CR01F8I0H07ER03FJ0H03FR07EJ0H01FCQ0FCJ0I0FEP03F8J0I07FP07FK0I03FCN01FEK0J0FEN03FCK0J07F8M0HFL0J03HFL03FEL0K0HFEJ01HF8L0K03HFEH03IFM0K01NFCM0L03LFEN0M07KF8N0N0JF8O0^FS\n"
-    
-    b += f"^FO240,341^A@N,36,36,E:BRUTALTYPE-BLACK.TTF^FD{_fd(emark_res)}^FS\n"
-
-    b += f"^FO540,304^BQN,2,5^FDQA,{_fd(qr_data)}^FS\n"
-
-    if made_in: # (165x60)px made in India MFG year.
-        b += f"^FO333,405^GFA,840,840,21,F81F01F01HF01HFE01F1F0F803C3C1E1HF01F01FH0F81F01F01HFC1HFE01F1F0F803C3E1E1HFC1F03FH0FC3F03F81HFE1HFE01F1F8F803C3E1E1HFE1F03FH0FC3F03F81IF1HFE01F1F8F803C3F1E1IF1F03F80FE7F03F81F3F1FI01F1FCF803C3F9E1E3F1F07F80HF7F07FC1F0F9FI01F1FEF803C3F9E1E1F1F07F80JF07FC1F0F9FI01F1FEF803C3FDE1E1F1F07FC0JF07BC1F0F9HFC01F1IF803C3FDE1E1F1F0HFC0JF0FBE1F0F9HFC01F1IF803C3HFE1E1F1F0FBC0JF0FBE1F0F9HFC01F1IF803C3HFE1E1F1F0F3E0FBHF0IF1F0F9HFC01F1F7F803C3DFE1E1F1F1HFE0FBDF1IF1F0F9FI01F1F7F803C3CFE1E1F1F1IF0F81F1IF1F1F1FI01F1F3F803C3CFE1E1F1F1IF0F81F1IF9IF1HFE01F1F3F803C3C7E1IF1F3IF0F81F3E0F9IF1HFE01F1F1F803C3C7E1HFE1F3E0F8F81F3E0F9HFE1HFE01F1F0F803C3C3E1HFE1F7C0F8F81F3C079HF81HFE01F1F0F803C3C1E1HF81F7C0F8,::::::N03gS0F01C7FE1FEI0703DHF81C07FEV0F03C7FE3HFI07839HF81E07HFV0F87C7FE7DFI03879HF83E07HFV0F87C7H07078H03C71CH03F070718T0FCFC7H07078H01CF1CH07F07073CT0FEFC7H07K01FE1CH0H707073CT0EFDC7FC7L0FC1HF0H7870F3CT0EFDC7FC71F8I07C1HF0F387HFV0E79C7FC71F8I0781HF0E3C7FEV0E39C7H07078I0381CH0HFC71CV0E01C7H07078I0381C01HFC71EV0E01C7H07878CH0381C01C1E70E18T0E01C7H07HF9EH0381HFBC0E70F3CT0E01C7H03HF9EH0381HFB80E7073CT0E01C7H01FH9EH0381HFB80E707BCT0^FS\n"
-    b += f"^FO380,422^A@N,22,22,E:BRUTALTYPE-BLACK.TTF^FD {_fd(mfg_year)}^FS\n" # yyyy format
-    
-    b += _footer(1)
+    b = _header(720, 420)
+    if pack_qr_data:
+        b += f"^FO20,80^A0N,25,23^FDPack ID: {_fd(pack_qr_data)}^FS\n"
+    b += "^FO160,20^A0N,30,32^FDBMS DATA^FS\n"
+    b += "^FO160,55^GB150,3,3^FS\n"
+    b += f"^FO20,100^BQN,2,5^FDQA,B_{(bmb_serial)}, C_{(cmb_serial)}^FS\n"
+    b += f"^FO160,140^A0N,25,25^FDBMB ID: {_fd(bmb_serial)}^FS\n"
+    b += f"^FO160,180^A0N,25,25^FDCMB ID: {_fd(cmb_serial)}^FS\n"
+    b += _footer(2)
     return b
 
 

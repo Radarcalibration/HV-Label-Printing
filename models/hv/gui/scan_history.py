@@ -1,5 +1,3 @@
- 
-
 import os
 import tkinter as tk
 from tkinter import messagebox, ttk
@@ -8,13 +6,12 @@ from models.hv.gui.constants import VARIANT_OPTIONS
 from models.hv.gui.print_actions import dispatch_zpl
 from models.hv.printing.constants import PRINTER_PACK_ID, PRINTER_DUMMY
 from models.hv.printing.labels import (
-    build_hv_bms_id_label,
     build_hv_dummy_id_label,
     build_hv_pack_id_label,
+    build_hv_bms_id_label,
 )
 
-# Three separate logs, one per screen — see session/scan_log.py,
-# session/pack_id_scan_log.py, session/bms_scan_log.py.
+# Three separate logs, one per screen — see session/scan_log.py, session/pack_id_scan_log.py, session/bms_scan_log.py.
 from models.hv.session.scan_log import load_all_records as load_dummy_records, open_log_file as open_dummy_log_file
 from models.hv.session.pack_id_scan_log import load_all_records as load_pack_id_records, open_log_file as open_pack_id_log_file
 from models.hv.session.bms_scan_log import load_all_records as load_bms_records, open_log_file as open_bms_log_file
@@ -70,7 +67,6 @@ class ScanHistoryDialog(tk.Toplevel):
         *,
         print_mode: str = "print",
         variant: str = VARIANT_OPTIONS[-1],
-        # revision: str = "V0",
         session=None,
         origin: str = "dummy",
     ) -> None:
@@ -82,7 +78,6 @@ class ScanHistoryDialog(tk.Toplevel):
 
         self._print_mode = print_mode
         self._variant = variant
-        # self._revision = revision
         self._session = session
         self._origin = origin  
         self._col_defs = _COL_DEFS[origin]
@@ -215,7 +210,7 @@ class ScanHistoryDialog(tk.Toplevel):
             messagebox.showwarning("Reprint", "No pack QR data for this record.", parent=self)
             return
 
-        from models.hv.gui.constants import VARIANT_PARAMS, get_type_of_reess
+        from models.hv.gui.constants import VARIANT_PARAMS
         from models.hv.nomenclature.scan_handler import identify_scan
         variant = rec.variant.strip() if rec.variant.strip() in VARIANT_OPTIONS else self._variant
         scan = identify_scan(rec.dummy_pack_qr)
@@ -240,7 +235,7 @@ class ScanHistoryDialog(tk.Toplevel):
             cell_mfr=cell_mfr,
         )
         dispatch_zpl(self, zpl, self._print_mode, default_name=f"reprint_dummy_{idx+1}.zpl", printer_name=PRINTER_DUMMY)
-        self._status_var.set(f"Reprinted (Dummy Pack QR) row {idx + 1}")
+        self._status_var.set(f"Reprinted (Dummy Pack) row {idx + 1}")
 
     def _reprint_pack_id(self, idx: int, rec) -> None:
         
@@ -319,13 +314,12 @@ def open_scan_history(
     *,
     print_mode: str = "print",
     variant: str = VARIANT_OPTIONS[-1],
-    # revision: str = "V0",
     session=None,
     origin: str = "dummy",
 ) -> None:
     try:
         dialog = ScanHistoryDialog(
-            parent, print_mode=print_mode, variant=variant, # revision=revision,
+            parent, print_mode=print_mode, variant=variant,
             session=session, origin=origin,
         )
         
