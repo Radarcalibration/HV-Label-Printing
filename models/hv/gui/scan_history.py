@@ -262,7 +262,7 @@ class ScanHistoryDialog(tk.Toplevel):
             serial_number=serial_number,
             rated_capacity=params["rated_capacity"],
             max_voltage=params["max_voltage"],
-            model_number=model_number,
+            type_of_reess=model_number,
             tac_number=params["tac_number"],
             variant=variant,
             category=category,

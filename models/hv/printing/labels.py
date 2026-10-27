@@ -17,7 +17,7 @@ from models.hv.printing.zpl import (
 
 
 def _reess_for_pack_qr(*, variant: str, cell_mfr: str, pack_qr_data: str) -> str:
-    qr_reess = pack_qr_data.split(":", 1)[0].strip().upper() if ":" in pack_qr_data else ""
+    qr_reess = pack_qr_data.split(":", 1)[0].strip().upper()
     if not cell_mfr and qr_reess:
         cell_mfr = get_cell_mfr_from_reess(qr_reess) or ""
     reess = get_type_of_reess(variant, cell_mfr)

@@ -1,10 +1,6 @@
- 
-
 import tkinter as tk
 from collections.abc import Callable
 from tkinter import ttk
-
-_SCAN_IDLE_MS = 500
 
 
 def setup_hardware_scanner(
@@ -12,39 +8,29 @@ def setup_hardware_scanner(
     variable: tk.StringVar,
     on_scan: Callable[[str], None],
 ) -> None:
-    """Submit scanner input after its keystroke burst, or immediately on Enter."""
+    """
+    Scanner must be configured to send ENTER after the barcode.
+    When ENTER is received, the scanned value is submitted immediately.
+    """
+
     entry.configure(font=("Consolas", 11))
-    pending_scan: str | None = None
 
-    def _cancel_pending_scan() -> None:
-        nonlocal pending_scan
-        if pending_scan is not None:
-            entry.after_cancel(pending_scan)
-            pending_scan = None
-
-    def _submit_scan() -> None:
+    def _process_scan(_event: tk.Event | None = None) -> str:
         scanned = variable.get().strip()
+
         if scanned:
             on_scan(scanned)
 
-    def _submit_after_idle() -> None:
-        nonlocal pending_scan
-        pending_scan = None
-        _submit_scan()
+        # Clear for next scan
+        variable.set("")
 
-    def _schedule_scan(event: tk.Event) -> None:
-        nonlocal pending_scan
-        if event.keysym == "Return":
-            _cancel_pending_scan()
-            return
-        _cancel_pending_scan()
-        if variable.get().strip():
-            pending_scan = entry.after(_SCAN_IDLE_MS, _submit_after_idle)
+        # Keep focus on scanner field
+        entry.focus_set()
 
-    def _ignore_enter(_event: tk.Event) -> str:
-        _cancel_pending_scan()
         return "break"
 
-    entry.bind("<KeyRelease>", _schedule_scan)
-    entry.bind("<Return>", _ignore_enter)
+    # Submit when scanner sends ENTER
+    entry.bind("<Return>", _process_scan)
+
+    # Keep scanner field focused
     entry.focus_set()
