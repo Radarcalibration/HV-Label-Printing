@@ -20,3 +20,4 @@ SW RH 10P	S6	BP00000147
 TS 8P	T1	BP00000131	BP00000131	3.5 kWh	4	116.2V	XXXXX	TAC number will be provided after homologation approval
 TS 10P	T2	BP00000001	BP00000001	5 kWh	5	116.2V	XXXXX	TAC number will be provided after homologation approval
 TS 10P	T3	BP00000132	BP00000132	6 kWh	6	116.2V	XXXXX	TAC number will be provided after homologation approval
+#test
