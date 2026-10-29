@@ -5,7 +5,13 @@ import requests
 from api.Client import get_machine_details, send_pack_id_scan
 from models.hv.gui.battery_parameters import build_battery_parameters_panel, set_battery_parameters
 from models.hv.gui.category_controls import add_category_field, bind_category_variant
-from models.hv.gui.constants import VARIANT_OPTIONS, VARIANT_PARAMS, format_pack_qr_data, get_type_of_reess
+from models.hv.gui.constants import (
+    CELL_MFR_OPTIONS,
+    VARIANT_OPTIONS,
+    format_pack_qr_data,
+    get_type_of_reess,
+    get_variant_params,
+)
 from models.hv.gui.layout import FIELD_FONT, FIELD_IPADY, HEADING_FONT, LABEL_FONT, configure_equal_columns
 from models.hv.gui.log_recovery import show_log_recovery_dialog
 from models.hv.gui.permissions import set_combobox_enabled
@@ -13,12 +19,16 @@ from models.hv.gui.print_actions import dispatch_zpl
 from models.hv.gui.scan_history import open_scan_history
 from models.hv.gui.scanner import setup_hardware_scanner
 from models.hv.nomenclature.scan_handler import ScanType, identify_scan
-from models.hv.nomenclature.serial_number import parse_serial_number
+from models.hv.nomenclature.serial_number import (
+    ParsedSerialNumber,
+    build_serial_number,
+    parse_serial_number,
+)
 from models.hv.printing.constants import PRINTER_PACK_ID
 from models.hv.printing.labels import build_hv_pack_id_label
 from datetime import datetime
 
-from models.hv.session.pack_store import save_pack_serial
+from models.hv.session.pack_store import load_pack_serial, save_pack_serial
 from models.hv.session.pack_id_scan_log import PackIdScanRecord
 from models.hv.session.pack_id_scan_log import append_scan_record as append_pack_id_scan_record
 
@@ -44,7 +54,9 @@ class BatteryPackIdGUI:
         self._param_labels: dict[str, ttk.Label] = {}
         self._category_combo: ttk.Combobox | None = None
         self._variant_combo: ttk.Combobox | None = None
+        self._cell_mfr_combo: ttk.Combobox | None = None
         self._serial_number_entry: ttk.Entry | None = None
+        self._suppress_config_update = False
         self.category_var = tk.StringVar(value="Domestic")
         self.variant_var = tk.StringVar(value=VARIANT_OPTIONS[-1])
         self.cell_mfr_var = tk.StringVar(value="--Waiting for Scan--")
@@ -52,7 +64,11 @@ class BatteryPackIdGUI:
         self.print_var = tk.StringVar(value="print")
 
         self._build_ui()
+        self.cell_mfr_var.trace_add("write", self._on_variant_change)
+        self._restore_saved_serial()
         self._on_variant_change()
+        for variable in (self.category_var, self.variant_var, self.cell_mfr_var):
+            variable.trace_add("write", self._on_configuration_change)
         self._apply_permissions()
 
 
@@ -91,10 +107,14 @@ class BatteryPackIdGUI:
         manufacturer_frame = ttk.Frame(row)
         manufacturer_frame.grid(row=0, column=2, sticky="nsew", padx=(0, 10))
         ttk.Label(manufacturer_frame, text="Cell Manufacturer", font=LABEL_FONT).pack(anchor=tk.W)
-        manufacturer_value = ttk.Entry(
-            manufacturer_frame, textvariable=self.cell_mfr_var, font=FIELD_FONT, state="disabled",
+        self._cell_mfr_combo = ttk.Combobox(
+            manufacturer_frame,
+            textvariable=self.cell_mfr_var,
+            values=CELL_MFR_OPTIONS,
+            state="disabled",
+            font=FIELD_FONT,
         )
-        manufacturer_value.pack(fill=tk.X, pady=(5, 0), ipady=FIELD_IPADY)
+        self._cell_mfr_combo.pack(fill=tk.X, pady=(5, 0), ipady=FIELD_IPADY)
 
         if self._variant_combo is not None:
             bind_category_variant(
@@ -133,7 +153,7 @@ class BatteryPackIdGUI:
             return
 
         variant = self.variant_var.get()
-        params = VARIANT_PARAMS.get(variant, VARIANT_PARAMS[VARIANT_OPTIONS[-1]])
+        params = get_variant_params(variant) or get_variant_params(VARIANT_OPTIONS[-1])
 
         category = self.category_var.get()
         cell_mfr = self.cell_mfr_var.get()
@@ -151,7 +171,74 @@ class BatteryPackIdGUI:
             emark=params["emark"],
             category=category,
             captions=self._captions,
+            show_emark_for_export=False,
         )
+
+    def _restore_saved_serial(self) -> None:
+        parsed = parse_serial_number(load_pack_serial())
+        if parsed is None:
+            return
+
+        normalized_serial = build_serial_number(
+            plant=parsed.plant,
+            line=parsed.line,
+            when=parsed.as_date,
+            serial_count=parsed.serial_count,
+            variant=parsed.variant,
+            cell_mfr=parsed.cell_mfr,
+            category=parsed.category,
+        )
+        if normalized_serial != parsed.raw:
+            save_pack_serial(normalized_serial)
+            parsed = parse_serial_number(normalized_serial)
+            if parsed is None:
+                return
+        self._apply_serial_configuration(parsed)
+
+    def _apply_serial_configuration(self, parsed: ParsedSerialNumber) -> None:
+        self._suppress_config_update = True
+        try:
+            self.category_var.set(parsed.category.capitalize())
+            self.variant_var.set(parsed.variant)
+            self.cell_mfr_var.set(parsed.cell_mfr)
+            self.serial_number_var.set(parsed.raw)
+        finally:
+            self._suppress_config_update = False
+        self._on_variant_change()
+
+    def _on_configuration_change(self, *_args: object) -> None:
+        self._on_variant_change()
+        if self._suppress_config_update:
+            return
+
+        current = self.serial_number_var.get().strip()
+        parsed = parse_serial_number(current) or parse_serial_number(load_pack_serial())
+        if parsed is None:
+            return
+
+        try:
+            variant = self.variant_var.get()
+            cell_mfr = self.cell_mfr_var.get()
+            if cell_mfr not in CELL_MFR_OPTIONS:
+                cell_mfr = parsed.cell_mfr
+            updated = build_serial_number(
+                plant=parsed.plant,
+                line=parsed.line,
+                when=parsed.as_date,
+                serial_count=parsed.serial_count,
+                variant=variant,
+                cell_mfr=cell_mfr,
+                category=self.category_var.get(),
+            )
+        except ValueError:
+            return
+
+        save_pack_serial(updated)
+        self._suppress_config_update = True
+        try:
+            self.serial_number_var.set(updated)
+        finally:
+            self._suppress_config_update = False
 
     def _build_scanner_section(self, parent: ttk.Frame) -> None:
         bar = ttk.Frame(parent, padding=(0, 0, 0, 10))
@@ -176,15 +263,8 @@ class BatteryPackIdGUI:
         ttk.Button(controls, text="History", command=self._open_history, width=10).pack(side=tk.LEFT, padx=(0, 8))
 
     def _on_clear(self) -> None:
-        """Clear the scan box and the displayed serial/parameters, ready
-        for the next scan."""
+        """Clear only the scanner input."""
         self.scanner_var.set("")
-        self.serial_number_var.set("--Waiting for Scan--")
-        if self._param_labels:
-            for widget in self._param_labels.values():
-                widget.configure(text="")
-        self.cell_mfr_var.set("--Waiting for Scan--")
-        self._on_variant_change()
 
     def _open_history(self) -> None:
         open_scan_history(
@@ -200,6 +280,8 @@ class BatteryPackIdGUI:
             set_combobox_enabled(self._category_combo, self.is_admin)
         if self._variant_combo is not None:
             set_combobox_enabled(self._variant_combo, self.is_admin)
+        if self._cell_mfr_combo is not None:
+            set_combobox_enabled(self._cell_mfr_combo, self.is_admin)
 
     def _param_value(self, key: str) -> str:
         widget = self._param_labels.get(key)
@@ -212,6 +294,13 @@ class BatteryPackIdGUI:
         if parsed is None:
             return ""
         return parsed.format_date()
+
+    def _label_mfg_date_for_serial(self, serial_number: str) -> str:
+        parsed = parse_serial_number(serial_number)
+        if parsed is None:
+            return ""
+        date_format = "%Y" if self.category_var.get().strip().lower() == "export" else "%d %m %Y"
+        return parsed.as_date.strftime(date_format)
 
     def _store_serial_if_present(self) -> None:
         serial_number = self.serial_number_var.get().strip()
@@ -235,7 +324,7 @@ class BatteryPackIdGUI:
             tac_number=self._param_value("tac_number"),
             variant=self.variant_var.get(),
             category=category,
-            mfg_date=self._mfg_date_for_serial(serial_number),
+            mfg_date=self._label_mfg_date_for_serial(serial_number),
             pack_qr_data=pack_qr_data,
             cell_mfr=self.cell_mfr_var.get(),
         )
@@ -283,11 +372,6 @@ class BatteryPackIdGUI:
 
     def _reset_fields(self) -> None:
         self.scanner_var.set("")
-        self.cell_mfr_var.set("--Waiting for Scan--")
-        self.serial_number_var.set("--Waiting for Scan--")
-        self._param_labels["model_number"].configure(text="NA")
-        
-        
 
     def _on_scan(self, raw: str) -> None:
         if not raw:
@@ -305,14 +389,9 @@ class BatteryPackIdGUI:
             #     return
 
             self.scanner_var.set("")  
-            self.serial_number_var.set(result.serial.raw)
-            self.cell_mfr_var.set(result.cell_mfr)
-            self.category_var.set(result.serial.category.capitalize()) # set the category var in config rows from scanned dummy id and vica versa.
-            
-            if result.pack_variant:
-                self.variant_var.set(result.pack_variant)
+            self._apply_serial_configuration(result.serial)
             # Always trigger a parameter refresh (covers bare serial scans too)
-            self._on_variant_change()
+            self.scanner_var.set("")
 
             # Auto-print the label, then reset fields after a brief preview delay
             if self._print_label(result.serial.raw):

@@ -17,13 +17,20 @@ MODEL_CODES = {
     "tesseract": "D",
 }
 MODEL_BY_CODE = {code: name for name, code in MODEL_CODES.items()}
+MODEL_BY_VARIANT = {
+    "12P": "high voltage",
+    "16P": "high voltage",
+    "24P": "high voltage",
+    "27P": "high voltage",
+    "SW_LH_8P": "shockwave",
+}
 
 MODULE_VARIANT_CODES_NEW = {
     # "33P": "A1",  # low voltage
     # "48P": "A2",  # low voltage
     "12P": "A3",  # high voltage
     "16P": "A4",  # high voltage
-    "24P": "S5",  # high voltage
+    "24P": "A5",  # high voltage
     "27P": "A6",  # high voltage
     "SW_LH_8P": "S1",   # Shockwave #1
     # "SW RH 8P": "S2",
@@ -124,13 +131,18 @@ def build_serial_number(
     if line not in {"1", "2", "3"}:
         raise ValueError(f"Unsupported line: {line}")
 
-    model_key = (model or "").strip().lower()
-    if model_key not in MODEL_CODES:
-        raise ValueError(f"Unsupported model: {model}")
-
     variant_key = (variant or "").strip().upper()
     if variant_key not in MODULE_VARIANT_CODES_NEW:
         raise ValueError(f"Unsupported variant: {variant}")
+
+    model_key = MODEL_BY_VARIANT.get(variant_key)
+    if model_key is None:
+        raise ValueError(f"No serial-number model is configured for variant: {variant}")
+    requested_model = (model or "").strip().lower()
+    if requested_model and requested_model != model_key:
+        raise ValueError(
+            f"Variant {variant_key} requires model {model_key}, not {requested_model}."
+        )
 
     cell_mfr_key = (cell_mfr or "").strip().lower()
     if cell_mfr_key not in CELL_MFR_CODES_NEW:

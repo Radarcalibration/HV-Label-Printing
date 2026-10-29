@@ -72,17 +72,18 @@ def set_battery_parameters(
     emark: str = "",
     category: str = "domestic",
     captions: dict[str, tk.StringVar] | None = None,
+    show_emark_for_export: bool = True,
 ) -> None:
-    is_export = category.strip().lower() == "export"
+    use_emark = show_emark_for_export and category.strip().lower() == "export"
 
     if captions is not None and "tac_number" in captions:
-        captions["tac_number"].set("E-Marking No" if is_export else "TAC Number")
+        captions["tac_number"].set("E-Marking No" if use_emark else "TAC Number")
 
     values = {
         "rated_capacity": rated_capacity,
         "max_voltage": max_voltage,
         "model_number": model_number,
-        "tac_number": emark if is_export else tac_number,
+        "tac_number": emark if use_emark else tac_number,
     }
     for key, text in values.items():
         if key in param_labels:

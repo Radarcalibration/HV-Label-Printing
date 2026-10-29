@@ -3,7 +3,7 @@ from collections.abc import Callable
 from tkinter import ttk
 
 from models.hv.gui.constants import CATEGORY_OPTIONS, variants_for_category
-from models.hv.gui.layout import FIELD_FONT#, FIELD_IPADY
+from models.hv.gui.layout import FIELD_FONT, FIELD_IPADY, LABEL_FONT
 
 
 def add_category_field(
@@ -11,19 +11,24 @@ def add_category_field(
     category_var: tk.StringVar,
     *,
     grid_column: int | None = None,
+    compact: bool = False,
+    padx: tuple[int, int] = (0, 10),
 ) -> ttk.Combobox:
-    """Add Category field — same style as other config fields, bold label, no box."""
-    compact = grid_column is not None
+    """Add a Category field using the same sizing as its neighboring controls."""
     frame = ttk.Frame(parent)
-    frame.grid(row=0, column=grid_column, sticky="nsew", padx=(0, 10))
+    frame.grid(row=0, column=grid_column, sticky="nsew", padx=padx)
 
     frame.columnconfigure(0, weight=1)
-    ttk.Label(frame, text="Category", font=("Segoe UI", 9, "bold")).pack(anchor=tk.W)
+    ttk.Label(frame, text="Category", font=LABEL_FONT).pack(anchor=tk.W)
     combo = ttk.Combobox(
         frame, textvariable=category_var, values=CATEGORY_OPTIONS,
         state="readonly", font=FIELD_FONT,
     )
-    combo.pack(fill=tk.X,pady=(5, 0),ipady=2,)
+    combo.pack(
+        fill=tk.X,
+        pady=(2 if compact else 5, 0),
+        ipady=2 if compact else FIELD_IPADY,
+    )
     return combo
 
 

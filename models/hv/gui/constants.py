@@ -6,14 +6,14 @@ VARIANT_TO_MODEL_BY_CELL_MFR = {
         "16P": "VX156600",
         "24P": "VX156610",
         "27P": "VX155480",
-        "SW_LH_8P": "VX155490" #2
+        "SW_LH_8P": "BP00000140" #2
     },
     "BAK": {
         "12P": "VQ150040",
         "16P": "VQ150050",
         "24P": "VQ150060",
         "27P": "VQ150070",
-        "SW_LH_8P": "VQ150080" #3
+        "SW_LH_8P": "BP00000140" #3
     },
 }
 
@@ -23,14 +23,14 @@ REESS_BY_MODEL_BY_CELL_MFR = {
         "VX156610": "VX156060", #24p
         "VX156600": "VX156070", #16p
         "VX156590": "VX156080", #12p
-        "VX155490": "VX155810", #SW_LH_8P #4
+        "BP00000140": "BP00000129", #SW_LH_8P
     },
     "BAK": {
         "VQ150040": "VQ150000", #12P
         "VQ150070": "VQ150030", #27P
         "VQ150060": "VQ150020", #24P
         "VQ150050": "VQ150010", #16P
-        "VQ150080": "VQ150011", #SW_LH_8P #5
+        "BP00000140": "BP00000129", #SW_LH_8P
     },
 }
 
@@ -50,52 +50,47 @@ CELL_MFR_BY_REESS = {
 }
 
 VARIANT_PARAMS = {
-    "12P": {
-        "rated_capacity": "6 kWh",
-        "max_voltage":    "116.2 V",
-        "model_number":   "VQ150040",
-        "type_of_reess":  "VQ150000",
-        "tac_number":     "AS8318",
-        "emark":          "E11*136R01/00*0113*00",
-        "energy_kwh":     "6 kWh",
-    },
-    "16P": {
-        "rated_capacity": "8.1 kWh",
-        "max_voltage":    "116.2 V",
-        "model_number":   "VQ150050",
-        "type_of_reess":  "VQ150010",
-        "tac_number":     "AS8317",
-        "emark":          "E11*136R01/00*0112*00",
-        "energy_kwh":     "8.1 kWh",
-    },
-    "24P": {
-        "rated_capacity": "12.1 kWh",
-        "max_voltage":    "116.2 V",
-        "model_number":   "VQ150060",
-        "type_of_reess":  "VQ150020",
-        "tac_number":     "AS8316",
-        "emark":          "E11*136R01/00*0110*00",
-        "energy_kwh":     "12.1 kWh",
-    },
-    "27P": {
-        "rated_capacity": "13.6 kWh",
-        "max_voltage":    "116.2 V",
-        "model_number":   "VQ150070",
-        "type_of_reess":  "VQ150030",
-        "tac_number":     "AS8315",
-        "emark":          "E11*136R01/00*0111*00",
-        "energy_kwh":     "13.6 kWh",
-    },
-    "SW_LH_8P": {                           #6
-            "rated_capacity": "5 kWh",
-            "max_voltage":    "116.2 V",
-            "model_number":   "VQ150080",  #7
-            "type_of_reess":  "VQ150011",   #8
-            "tac_number":     "AS8310",
-            "emark":          "E11*136R01/00*0119*00",
-            "energy_kwh":     "12.1 kWh",
+    "low voltage": {},
+    "high voltage": {
+        "12P": {
+            "rated_capacity": "6 kWh",
+            "max_voltage": "116.2 V",
+            "srb_code": "SRB05",
+            "tac_number": "AS8318",
+            "emark": "E11*136R01/00*0113*00",
         },
-    
+        "16P": {
+            "rated_capacity": "8.1 kWh",
+            "max_voltage": "116.2 V",
+            "srb_code": "SRB07",
+            "tac_number": "AS8317",
+            "emark": "E11*136R01/00*0112*00",
+        },
+        "24P": {
+            "rated_capacity": "12.1 kWh",
+            "max_voltage": "116.2 V",
+            "srb_code": "SRB10",
+            "tac_number": "AS8316",
+            "emark": "E11*136R01/00*0110*00",
+        },
+        "27P": {
+            "rated_capacity": "13.6 kWh",
+            "max_voltage": "116.2 V",
+            "srb_code": "SRB12",
+            "tac_number": "AS8315",
+            "emark": "E11*136R01/00*0111*00",
+        },
+    },
+    "shockwave": {
+        "SW_LH_8P": {
+            "rated_capacity": "4 kWh",
+            "max_voltage": "116.2 V",
+            "srb_code": "SRB04",
+            "tac_number": "XXXXXX",
+            "emark": "E11*136R01/00*0119*00",
+        },
+    },
+    "tesseract": {},
 }
 
 
@@ -183,8 +178,19 @@ BATTERY_PARAM_ROWS = [
 
 def variants_for_category(category: str) -> list[str]:
     if category.strip().lower() == "export":
-        return [v for v in VARIANT_OPTIONS if VARIANT_PARAMS[v]["emark"] != "NA"]
+        return [
+            variant for variant in VARIANT_OPTIONS
+            if get_variant_params(variant).get("emark", "NA") != "NA"
+        ]
     return list(VARIANT_OPTIONS)
+
+
+def get_variant_params(variant: str) -> dict[str, str]:
+    variant = variant.strip()
+    for model_params in VARIANT_PARAMS.values():
+        if variant in model_params:
+            return model_params[variant]
+    return {}
 
 
 def format_pack_qr_data(*, variant: str, serial_number: str, cell_mfr: str) -> str:
@@ -220,19 +226,19 @@ def get_variant_from_reess(reess: str) -> str | None:
 
 
 def get_tac_number(variant: str) -> str:
-    return VARIANT_PARAMS.get(variant.strip(), {}).get("tac_number", "NA")
+    return get_variant_params(variant).get("tac_number", "NA")
 
 
 def get_emark(variant: str) -> str:
-    return VARIANT_PARAMS.get(variant.strip(), {}).get("emark", "NA")
+    return get_variant_params(variant).get("emark", "NA")
 
 
 def get_rated_capacity(variant: str) -> str:
-    return VARIANT_PARAMS.get(variant.strip(), {}).get("rated_capacity", "NA")
+    return get_variant_params(variant).get("rated_capacity", "NA")
 
 
 def get_max_voltage(variant: str) -> str:
-    return VARIANT_PARAMS.get(variant.strip(), {}).get("max_voltage", "NA")
+    return get_variant_params(variant).get("max_voltage", "NA")
 
 
 def get_emark_res_code(variant: str) -> str:
@@ -245,14 +251,5 @@ def get_emark_res_code(variant: str) -> str:
     return f"{prefix}RES-{r_num}{suffix}"
 
 
-SRB_BY_VARIANT = {
-    "12P": "SRB05",
-    "16P": "SRB07",
-    "24P": "SRB10",
-    "27P": "SRB12",
-    "SW_LH_8P": "SRB13",    #10
-}
-
-
 def get_srb_code(variant: str) -> str:
-    return SRB_BY_VARIANT.get(variant.strip(), "NA")
+    return get_variant_params(variant).get("srb_code", "NA")

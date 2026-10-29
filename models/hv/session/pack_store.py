@@ -215,7 +215,6 @@ def increment_pack_serial() -> str:
         line=parsed.line,
         when=parsed.as_date,
         serial_count=new_count,
-        model=parsed.model,
         variant=parsed.variant,
         cell_mfr=parsed.cell_mfr,
         category=parsed.category,

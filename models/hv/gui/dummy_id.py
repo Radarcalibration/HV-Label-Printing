@@ -7,9 +7,9 @@ from api.Client import get_machine_details, send_dummy_scan
 from models.hv.gui.battery_parameters import build_battery_parameters_panel, set_battery_parameters
 from models.hv.gui.constants import (
     VARIANT_OPTIONS,
-    VARIANT_PARAMS,
     format_pack_qr_data,
     get_type_of_reess,
+    get_variant_params,
 )
 from models.hv.gui.layout import FIELD_FONT, FIELD_IPADY, HEADING_FONT
 from models.hv.gui.print_actions import dispatch_zpl
@@ -183,10 +183,15 @@ class DummyIdGUI:
 
         category = "Export" if parsed.is_export else "Domestic"
 
-        params = VARIANT_PARAMS.get(variant, VARIANT_PARAMS[VARIANT_OPTIONS[-1]])
+        params = get_variant_params(variant) or get_variant_params(VARIANT_OPTIONS[-1])
         cell_mfr = self.cell_mfr_var.get()
         model_number = get_type_of_reess(variant, cell_mfr)
         mfg_date = parsed.format_date()
+        label_mfg_date = (
+            parsed.as_date.strftime("%Y")
+            if parsed.is_export
+            else parsed.as_date.strftime("%d %b %Y")
+        )
 
         pack_qr = format_pack_qr_data(variant=variant, serial_number=serial, cell_mfr=cell_mfr)
 
@@ -206,7 +211,7 @@ class DummyIdGUI:
             pack_qr_data=pack_qr,
             serial_number=serial,
             tac_number=params["tac_number"],
-            mfg_date=mfg_date,
+            mfg_date=label_mfg_date,
             variant=variant,
             category=category,
             cell_mfr=cell_mfr,

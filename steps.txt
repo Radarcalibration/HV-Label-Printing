@@ -1,0 +1,36 @@
+Steps to add variants
+====================
+
+For each new variant, update these locations in order:
+
+1. `common/nomenclature/serial_number.py`
+   - Add the variant and model family to `MODEL_BY_VARIANT`.
+   - Assign a unique serial variant code in `MODULE_VARIANT_CODES_NEW`.
+   - Expand `NEW_SERIAL_NUMBER_PATTERN` if the code is outside its accepted ranges.
+
+2. `models/hv/gui/constants.py`
+   - Add the name to `VARIANT_OPTIONS`.
+   - Add module part numbers to `VARIANT_TO_MODEL_BY_CELL_MFR`.
+   - Map each module part number to its pack/REESS number in
+     `REESS_BY_MODEL_BY_CELL_MFR`.
+   - Add capacity, voltage, SRB, TAC, and E-mark under the correct
+     `VARIANT_PARAMS` family.
+   - Assign a unique module-ID code in `MODULE_VARIANT_CODES`.
+
+3. `models/hv/nomenclature/module_id.py`
+   - Extend `_SUB_PATTERN` and `_FULL_PATTERN` if the new module-ID code is
+     outside the accepted range.
+
+4. `models/hv/gui/dummy_id.py`
+   - Add a cell manufacturer to `DUMMY_CELL_MFR_OPTIONS` only if required.
+
+5. `updates.md`
+   - Add the variant specifications and matching sample serial, module IDs,
+     and pack QR data.
+
+6. Verify
+   - Check serial and module-ID build/parse, manufacturer part-number lookup,
+     Domestic/Export option behavior, QR data, and label output.
+
+Keep serial variant codes, module-ID codes, model-family codes, module part
+numbers, and pack/REESS numbers distinct; update each mapping separately.

@@ -1,14 +1,10 @@
-"""Pack serial QR format: VX156060:ABA51202605281U00139 """ 
-#VX155810:ABS11202610291U00002
+"""Pack serial QR format: VX156060:ABA51202605281U00139 """
 
 import re
 from dataclasses import dataclass
 from enum import Enum
 
-from models.hv.gui.constants import (
-    REESS_TO_VARIANT,
-    get_cell_mfr_from_reess,
-)
+from models.hv.gui.constants import REESS_TO_VARIANT
 from models.hv.nomenclature.bms_id import parse_bmb_cmb_id
 from models.hv.nomenclature.module_id import ParsedModuleId, parse_module_id
 from models.hv.nomenclature.serial_number import ParsedSerialNumber, parse_serial_number
@@ -59,7 +55,7 @@ def identify_scan(value: str) -> ScanResult:
                 scan_type=ScanType.SERIAL_NUMBER,
                 serial=serial,
                 pack_variant=variant,
-                cell_mfr=get_cell_mfr_from_reess(reess_part),
+                cell_mfr=serial.cell_mfr,
             )
 
     module = parse_module_id(cleaned)

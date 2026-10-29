@@ -9,9 +9,9 @@ from models.hv.gui.category_controls import add_category_field, bind_category_va
 from models.hv.gui.constants import (
     CELL_MFR_OPTIONS,
     VARIANT_OPTIONS,
-    VARIANT_PARAMS,
     format_pack_qr_data,
     get_type_of_reess,
+    get_variant_params,
     variants_for_category,
 )
 from models.hv.gui.layout import DISPLAY_FONT, FIELD_FONT, HEADING_FONT, LABEL_FONT, configure_equal_columns
@@ -20,7 +20,11 @@ from models.hv.gui.print_actions import dispatch_zpl
 from models.hv.gui.scan_apply import apply_module_fields, format_date_display
 from models.hv.gui.scanner import setup_hardware_scanner
 from models.hv.nomenclature.module_id import parse_module_id
-from models.hv.nomenclature.serial_number import build_serial_number, parse_serial_number
+from models.hv.nomenclature.serial_number import (
+    ParsedSerialNumber,
+    build_serial_number,
+    parse_serial_number,
+)
 from models.hv.nomenclature.scan_handler import ScanType, identify_scan
 from models.hv.printing.constants import PRINTER_DUMMY
 from common.auth.session import Session
@@ -75,7 +79,8 @@ class BatteryPackDummyGUI:
         self.print_var = tk.StringVar(value="print")
 
 
-        self._true_date = datetime.now().date() #always call today date, no ecncoded date rollback should happen 
+        self._true_date = datetime.now().date()
+        self._last_refresh_date = self._true_date
 
         self._build_ui()
         self._refresh_datetime()
@@ -91,14 +96,29 @@ class BatteryPackDummyGUI:
     def _init_serial(self) -> None:
         stored = load_pack_serial()
         if stored:
-            self.serial_number_var.set(stored)
-            stored_count = load_pack_serial_count()
-            if stored_count:
-                self.vars["serial_count"].set(stored_count)
+            parsed = parse_serial_number(stored)
+            if parsed is not None:
+                serial = build_serial_number(
+                    plant=parsed.plant,
+                    line=parsed.line,
+                    when=parsed.as_date,
+                    serial_count=parsed.serial_count,
+                    variant=parsed.variant,
+                    cell_mfr=parsed.cell_mfr,
+                    category=parsed.category,
+                )
+                if serial != parsed.raw:
+                    save_pack_serial(serial)
+                    parsed = parse_serial_number(serial)
+                if parsed is None:
+                    return
+                self._apply_serial_configuration(parsed)
+                self.serial_number_var.set(parsed.raw)
             else:
-                parsed = parse_serial_number(stored)
-                if parsed:
-                    self.vars["serial_count"].set(parsed.serial_count)
+                self.serial_number_var.set(stored)
+                stored_count = load_pack_serial_count()
+                if stored_count:
+                    self.vars["serial_count"].set(stored_count)
         else:
             self._rebuild_and_store_serial()
 
@@ -106,7 +126,6 @@ class BatteryPackDummyGUI:
     def _serial_number_kwargs(self) -> dict:
         
         return {
-            "model": "high voltage",
             "variant": self.vars["variant"].get(),
             "cell_mfr": self.vars["cell_mfr"].get(),
             "category": self.vars["category"].get(),
@@ -188,7 +207,13 @@ class BatteryPackDummyGUI:
         configure_equal_columns(row1, 5)
 
         self.vars["category"] = tk.StringVar(value="Domestic")
-        self._category_combo = add_category_field(row1, self.vars["category"], grid_column=0)  
+        self._category_combo = add_category_field(
+            row1,
+            self.vars["category"],
+            grid_column=0,
+            compact=True,
+            padx=(0, 8),
+        )
 
         for column, (label, key, values) in enumerate(visible_row1, start=1):
             self._add_field(row1, column, label, key, values)
@@ -364,6 +389,7 @@ class BatteryPackDummyGUI:
         return parsed.part_number if parsed is not None else None
 
     def _clear_modules(self) -> None:
+        self.scan_var.set("")
         for module_var in self._module_vars:
             module_var.set("")
         self._on_variant_or_revision_change()
@@ -566,10 +592,15 @@ class BatteryPackDummyGUI:
         cell_mfr = self.vars["cell_mfr"].get()
         serial = self.serial_number_var.get().strip()
         pack_qr = self.pack_qr_var.get().strip()
-        params = VARIANT_PARAMS.get(variant, VARIANT_PARAMS[VARIANT_OPTIONS[-1]])
+        params = get_variant_params(variant) or get_variant_params(VARIANT_OPTIONS[-1])
 
         _parsed = parse_serial_number(serial)
         mfg_date = _parsed.format_date() if _parsed else ""
+        category = self.vars["category"].get()
+        label_mfg_date = ""
+        if _parsed is not None:
+            date_format = "%Y" if category.strip().lower() == "export" else "%d %b %Y"
+            label_mfg_date = _parsed.as_date.strftime(date_format)
         serial_count = _parsed.serial_count if _parsed else ""
         
         now = datetime.now()
@@ -620,9 +651,9 @@ class BatteryPackDummyGUI:
             pack_qr_data=pack_qr,
             serial_number=serial,
             tac_number=params["tac_number"],
-            mfg_date=mfg_date,
+            mfg_date=label_mfg_date,
             variant=variant,
-            category=self.vars["category"].get(),
+            category=category,
             cell_mfr=cell_mfr,
         )
         dispatch_zpl(self.root, zpl, self.print_var.get(), default_name=f"pack_{serial}.zpl", printer_name=PRINTER_DUMMY)
@@ -710,7 +741,7 @@ class BatteryPackDummyGUI:
     def _on_variant_or_revision_change(self, *_args: object) -> None:
         variant = self.vars["variant"].get()
         cell_mfr = self.vars["cell_mfr"].get()
-        params = VARIANT_PARAMS.get(variant, VARIANT_PARAMS[VARIANT_OPTIONS[-1]])
+        params = get_variant_params(variant) or get_variant_params(VARIANT_OPTIONS[-1])
 
         if self._param_labels:
             set_battery_parameters(
@@ -767,7 +798,6 @@ class BatteryPackDummyGUI:
         parsed = parse_serial_number(current) if current else None
         if parsed is not None:
             extra = {
-                "model": parsed.model,
                 "variant": parsed.variant,
                 "cell_mfr": parsed.cell_mfr,
                 "category": parsed.category,
@@ -855,24 +885,24 @@ class BatteryPackDummyGUI:
 
         save_pack_serial(serial.strip())
         save_pack_serial_count(parsed.serial_count)
+        self._apply_serial_configuration(parsed)
+
+    def _apply_serial_configuration(self, parsed: ParsedSerialNumber) -> None:
         self._true_date = parsed.as_date
         self._suppress_traces = True
         try:
+            self.vars["category"].set(parsed.category.capitalize())
             self.vars["plant"].set(parsed.plant)
             self.vars["line"].set(parsed.line)
             self.vars["serial_count"].set(parsed.serial_count)
             self.vars["cell_mfr"].set(parsed.cell_mfr)
             self.vars["variant"].set(parsed.variant)
-            self.vars["category"].set(parsed.category.capitalize())
             if "date" in self.vars:
-                if is_export: # date format for export
-                    self.vars["date"].set(parsed.as_date.strftime("%z %B/%Y")) # October/2026
-                    # self.vars["date"].set(str(parsed.year)) # 2026
-                else:
-                    self.vars["date"].set(parsed.as_date.strftime("%d/%B/%Y")) # 10/October/2026
+                self.vars["date"].set(self._current_date_str())
         finally:
             self._suppress_traces = False
-        self.serial_number_var.set(serial.strip())
+        self._on_variant_or_revision_change()
+        self.serial_number_var.set(parsed.raw)
 
     
     def _refresh_datetime(self) -> None:
@@ -881,7 +911,8 @@ class BatteryPackDummyGUI:
         rebuild_required = False
         current_date = now.date()
 
-        if current_date != self._true_date:
+        if current_date != self._last_refresh_date:
+            self._last_refresh_date = current_date
             self._true_date = current_date
 
             if "date" in self.vars:

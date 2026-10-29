@@ -28,10 +28,10 @@ _COL_DEFS = {
         ("serial_number", "Pack ID (Serial No)",  160,  "w"),
         ("ref_no",        "Ref No",                90,  "center"),
         ("variant",       "Variant",               90,  "center"),
-        ("m1",            "M1",                   160,  "w"),
-        ("m2",            "M2",                   160,  "w"),
-        ("m3",            "M3",                   160,  "w"),
-        ("m4",            "M4",                   160,  "w"),
+        ("m1",            "M1",                   200,  "w"),
+        ("m2",            "M2",                   200,  "w"),
+        ("m3",            "M3",                   200,  "w"),
+        ("m4",            "M4",                   200,  "w"),
         ("dummy_status",  "Dummy Pack ID Status", 160,  "center"),
         ("dummy_qr",      "Dummy Pack QR",        200,  "w"),
         ("issue_1",       "Issue Desc 1",         180,  "w"),
@@ -210,7 +210,7 @@ class ScanHistoryDialog(tk.Toplevel):
             messagebox.showwarning("Reprint", "No pack QR data for this record.", parent=self)
             return
 
-        from models.hv.gui.constants import VARIANT_PARAMS
+        from models.hv.gui.constants import get_variant_params
         from models.hv.nomenclature.scan_handler import identify_scan
         variant = rec.variant.strip() if rec.variant.strip() in VARIANT_OPTIONS else self._variant
         scan = identify_scan(rec.dummy_pack_qr)
@@ -222,14 +222,19 @@ class ScanHistoryDialog(tk.Toplevel):
             )
             return
         cell_mfr = scan.cell_mfr or ""
-        params = VARIANT_PARAMS.get(variant, VARIANT_PARAMS[VARIANT_OPTIONS[-1]])
+        params = get_variant_params(variant) or get_variant_params(VARIANT_OPTIONS[-1])
         category = scan.serial.category.capitalize()
+        label_mfg_date = (
+            scan.serial.as_date.strftime("%Y")
+            if scan.serial.is_export
+            else scan.serial.as_date.strftime("%d %b %Y")
+        )
 
         zpl = build_hv_dummy_id_label(
             pack_qr_data=rec.dummy_pack_qr,
             serial_number=rec.serial_number or scan.serial.raw,
             tac_number=params["tac_number"],
-            mfg_date=rec.date,
+            mfg_date=label_mfg_date,
             variant=variant,
             category=category,
             cell_mfr=cell_mfr,
@@ -249,14 +254,19 @@ class ScanHistoryDialog(tk.Toplevel):
             messagebox.showwarning("Reprint", "Pack QR data for this record isn't valid.", parent=self)
             return
 
-        from models.hv.gui.constants import VARIANT_PARAMS, get_type_of_reess
+        from models.hv.gui.constants import get_type_of_reess, get_variant_params
         variant = rec.variant.strip() if rec.variant.strip() in VARIANT_OPTIONS else (result.pack_variant or self._variant)
         cell_mfr = result.cell_mfr or ""
         serial_number = rec.serial_number or result.serial.raw
         
         category = result.serial.category.capitalize()
-        params = VARIANT_PARAMS.get(variant, VARIANT_PARAMS[VARIANT_OPTIONS[-1]])
+        params = get_variant_params(variant) or get_variant_params(VARIANT_OPTIONS[-1])
         model_number = get_type_of_reess(variant, cell_mfr)
+        label_mfg_date = (
+            result.serial.as_date.strftime("%Y")
+            if result.serial.is_export
+            else result.serial.as_date.strftime("%d %m %Y")
+        )
 
         zpl = build_hv_pack_id_label(
             serial_number=serial_number,
@@ -266,7 +276,7 @@ class ScanHistoryDialog(tk.Toplevel):
             tac_number=params["tac_number"],
             variant=variant,
             category=category,
-            mfg_date=rec.date,
+            mfg_date=label_mfg_date,
             pack_qr_data=rec.pack_qr_data,
             cell_mfr=cell_mfr,
         )
