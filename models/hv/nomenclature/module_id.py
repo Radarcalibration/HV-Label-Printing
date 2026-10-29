@@ -1,4 +1,4 @@
-""" VX156610-E1611109G260076 VQ150060-E1311109G260078 """
+""" VX155490-G1611109G260076 VQ150060-J1311109G260078 """
 
 import re
 from dataclasses import dataclass
@@ -15,7 +15,7 @@ from models.hv.gui.constants import (
 )
 
 _SUB_PATTERN = re.compile(
-    r"^(?P<variant>[C-F])"
+    r"^(?P<variant>[C-G])" #1
     r"(?P<group>[1-3])"
     r"(?P<cell_mfr>[1-6])"
     r"(?P<plant>[123ABC])" #plant encoded (either 123 and ABC)
@@ -29,7 +29,7 @@ _SUB_PATTERN = re.compile(
 # VX156600-D1611105J260303 (valid module id, from robot cell sorting machine) -> accept this type
 # VQ156610-E2A1116J26009759 (invalid module id, from manual cell sorting machine) -> can't accept this type
 _FULL_PATTERN = re.compile(
-    r"^(?P<part_number>V[QX][0-9]{6})-(?P<sub>[C-F][1-3][1-6][123ABC][123][123]\d{2}[A-L]\d{2}\d{4})$"
+    r"^(?P<part_number>V[QX][0-9]{6})-(?P<sub>[C-G][1-3][1-6][123ABC][123][123]\d{2}[A-L]\d{2}\d{4})$"
 )
 @dataclass(frozen=True)
 class ParsedModuleId:

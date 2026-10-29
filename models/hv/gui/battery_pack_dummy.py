@@ -221,7 +221,7 @@ class BatteryPackDummyGUI:
 
 
 
-        serial_var: tk.StringVar = self.vars["serial_count"]  
+        serial_var: tk.StringVar = self.vars["serial_count"]
         serial_entry = self._widgets["serial_count"]
         serial_entry.configure(validate="key", validatecommand=(self.root.register(self._validate_serial_count), "%P"))
 
@@ -410,7 +410,7 @@ class BatteryPackDummyGUI:
             m1_part_number = self._m1_part_number()
             category = self.vars["category"].get().strip().lower()
 
-            if category == "export" and incoming_variant not in variants_for_category("Export"):
+            if category == "export" and incoming_variant not in variants_for_category("Export"): #1
                 messagebox.showerror(
                     "Variant error",
                     f"Export does not support {incoming_variant} modules.",
@@ -866,10 +866,10 @@ class BatteryPackDummyGUI:
             self.vars["category"].set(parsed.category.capitalize())
             if "date" in self.vars:
                 if is_export: # date format for export
-                    self.vars["date"].set(parsed.as_date.strftime("%z %b %Y")) # oct 2026
+                    self.vars["date"].set(parsed.as_date.strftime("%z %B/%Y")) # October/2026
                     # self.vars["date"].set(str(parsed.year)) # 2026
                 else:
-                    self.vars["date"].set(parsed.as_date.strftime("%d %b %Y"))
+                    self.vars["date"].set(parsed.as_date.strftime("%d/%B/%Y")) # 10/October/2026
         finally:
             self._suppress_traces = False
         self.serial_number_var.set(serial.strip())

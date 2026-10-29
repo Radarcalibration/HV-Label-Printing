@@ -296,13 +296,13 @@ class BatteryPackIdGUI:
         result = identify_scan(raw)
         self.scanner_var.set(result.raw)
 
-        if result.scan_type == ScanType.SERIAL_NUMBER and result.serial is not None: # serial number is not accepted, only dummy pack id is accepted
-            if result.pack_variant is None or result.cell_mfr is None:
-                self.scanner_var.set("")
-                messagebox.showwarning(
-                    "Scan", "Serial Number scanned. Expecting a Pack QR or bmb_cmb code.", parent=self.root
-                )
-                return
+        if result.scan_type == ScanType.SERIAL_NUMBER and result.serial is not None: # serial number is accepted, only dummy pack id is accepted
+            # if result.pack_variant is None or result.cell_mfr is None:
+            #     self.scanner_var.set("")
+            #     messagebox.showwarning(
+            #         "Scan", "Serial Number scanned. Expecting a Pack QR or bmb_cmb code.", parent=self.root
+            #     )
+            #     return
 
             self.scanner_var.set("")  
             self.serial_number_var.set(result.serial.raw)
@@ -319,13 +319,13 @@ class BatteryPackIdGUI:
                 self.root.after(1000, self._reset_fields)
             return
 
-        if result.scan_type == ScanType.MODULE_ID:
-            messagebox.showwarning(
-                "Scan",
-                "This is Module id, Scan Dummy Pack id.",
-                parent=self.root,
-            )
-            return
+        # if result.scan_type == ScanType.MODULE_ID:
+        #     messagebox.showwarning(
+        #         "Scan",
+        #         "This is Module id, Scan Dummy Pack id.",
+        #         parent=self.root,
+        #     )
+        #     return
         
         else:
             messagebox.showwarning(

@@ -4,9 +4,9 @@ from datetime import date, datetime
 
 # Serial number codes
 NEW_PLANT_CODES = {
-    "jigani": "A",
-    "domlur": "B",
-    "plant_c": "C",  
+    "Jigani": "A",
+    "Domlur": "B",
+    "Plant_c": "C",  
 }
 NEW_PLANT_BY_CODE = {code: name for name, code in NEW_PLANT_CODES.items()}
 
@@ -19,14 +19,18 @@ MODEL_CODES = {
 MODEL_BY_CODE = {code: name for name, code in MODEL_CODES.items()}
 
 MODULE_VARIANT_CODES_NEW = {
-    "33P": "A1",  # low voltage
-    "48P": "A2",  # low voltage
+    # "33P": "A1",  # low voltage
+    # "48P": "A2",  # low voltage
     "12P": "A3",  # high voltage
     "16P": "A4",  # high voltage
-    "24P": "A5",  # high voltage
+    "24P": "S5",  # high voltage
     "27P": "A6",  # high voltage
-    "8P": "A7",   # Shockwave
-    "10P": "A8",  # Shockwave + tesseract
+    "SW_LH_8P": "S1",   # Shockwave #1
+    # "SW RH 8P": "S2",
+    # "SW LH 10P": "S3",
+    # "SW LH 10P": "S4",
+    # "TS 8P": "T1",  #tesseract
+    # "TS 10P" : "T2"
 }
 VARIANT_BY_CODE_NEW = {code: name for name, code in MODULE_VARIANT_CODES_NEW.items()}
 
@@ -57,12 +61,12 @@ CELL_MFR_BY_CODE_NEW = {
 
 
 NEW_SERIAL_NUMBER_PATTERN = re.compile(
-    r"^(?P<plant>[ABC])(?P<model>[ABCD])(?P<variant>A[3-6])(?P<line>[123])"
+    r"^(?P<plant>[ABC])(?P<model>[ABCD])(?P<variant>[AST][0-9])(?P<line>[123])"
     r"(?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})"
     r"(?P<category>[12])(?P<cell_mfr>[P-U])(?P<serial_count>\d{5})$"
 )
 
-# for new serial count logic, 99999- A0000, Z9999- AA000, ZZ999- AAA00 and so on total (7,363,359 possible counts)
+# New approach for serial_count logic, 99999- A0000, Z9999- AA000, ZZ999- AAA00 and so on total (7,363,359 possible counts)
 # NEW_SERIAL_NUMBER_PATTERN = re.compile(
 #     r"^(?P<plant>[ABC])(?P<model>[ABCD])(?P<variant>A[3-6])(?P<line>[123])"
 #     r"(?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})"
@@ -110,7 +114,7 @@ def build_serial_number(
     category: str | None = None,
 ) -> str:
     
-    plant_key = plant.strip().lower()
+    plant_key = plant.strip().capitalize()
     if isinstance(when, datetime):
         when = when.date()
 
@@ -141,6 +145,7 @@ def build_serial_number(
         raise ValueError("Serial count cannot exceed 99999.")
     count = count_digits.zfill(5)
 
+    #for new approach serial_count logic
     # count = (serial_count or "").strip().upper()
 
     # if not re.fullmatch(r"[A-Z]{0,4}\d{1,5}", count):

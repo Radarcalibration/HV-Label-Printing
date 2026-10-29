@@ -17,11 +17,11 @@ from models.hv.printing.zpl import (
 
 
 def _reess_for_pack_qr(*, variant: str, cell_mfr: str, pack_qr_data: str) -> str:
-    qr_reess = pack_qr_data.split(":", 1)[0].strip().upper()
+    qr_reess = pack_qr_data.split(":", 1)[0].strip().upper() # extract part number from Dummy ID
     if not cell_mfr and qr_reess:
-        cell_mfr = get_cell_mfr_from_reess(qr_reess) or ""
-    reess = get_type_of_reess(variant, cell_mfr)
-    if reess == "NA" or (qr_reess and reess != qr_reess):
+        cell_mfr = get_cell_mfr_from_reess(qr_reess) # extract cell_mfr from part number
+    reess = get_type_of_reess(variant, cell_mfr) # get part number from battery parameters
+    if reess == "NA" or (qr_reess and reess != qr_reess): # if failure due to mismatch
         raise ValueError(f"part number of pack id does not match variant/cell manufacturer: {pack_qr_data}")
     return reess
 
@@ -30,7 +30,7 @@ def _manufacturing_year(mfg_date: str, mfg_year: str | None = None) -> str:
     if mfg_year and mfg_year.strip().isdigit() and len(mfg_year.strip()) == 4:
         return mfg_year.strip()
     value = mfg_date.strip()
-    if value.isdigit() and len(value) == 4:
+    if value.isdigit() and len(value) == 4: # 4 digits
         return value
     for date_format in ("%d %b %Y", "%d %B %Y", "%d %m %Y", "%d/%m/%Y", "%d/%B/%Y"):
         try:
@@ -47,7 +47,7 @@ def _pack_manufacturing_value(
         return _manufacturing_year(mfg_date, mfg_year)
     for date_format in ("%d %b %Y", "%d %B %Y", "%d %m %Y", "%d/%m/%Y", "%d/%B/%Y"):
         try:
-            return datetime.strptime(mfg_date.strip(), date_format).strftime("%d %m %Y")
+            return datetime.strptime(mfg_date.strip(), date_format).strftime("%d %m %Y") # 29 10 2026
         except ValueError:
             continue
     raise ValueError(f"Could not parse manufacturing date {mfg_date!r}.")
@@ -65,7 +65,7 @@ def build_hv_dummy_id_label(
     mfg_year: str | None = None,
 ) -> str:
     is_export = category.strip().lower() == "export"
-    value = get_emark(variant) if (is_export and variant) else tac_number
+    tac_value= get_emark(variant) if (is_export and variant) else tac_number
     tac_label = "E-Marking No" if (is_export and variant) else "TAC Number"
     model_number = _reess_for_pack_qr(
         variant=variant, cell_mfr=cell_mfr, pack_qr_data=pack_qr_data
@@ -75,7 +75,7 @@ def build_hv_dummy_id_label(
         if is_export
         else mfg_date.strip()
     )
-    tac_number = value
+    tac_number = tac_value
     return build_hv_dummy_id_zpl(
         pack_qr_data=pack_qr_data,
         model_number=model_number,
@@ -84,14 +84,6 @@ def build_hv_dummy_id_label(
         tac_label=tac_label,
         category=category,
         mfg_value=mfg_value,
-    )
-
-
-def build_hv_bms_id_label(*, bmb_serial: str, cmb_serial: str, pack_qr_data: str = "") -> str:
-    return build_hv_bms_id_zpl(
-        bmb_serial=bmb_serial,
-        cmb_serial=cmb_serial,
-        pack_qr_data=pack_qr_data,
     )
 
 
@@ -131,4 +123,12 @@ def build_hv_pack_id_label(
         mfg_date_new=mfg_date_new,
         qr_data=qr_data,
         category=category,
+    )
+    
+    
+def build_hv_bms_id_label(*, bmb_serial: str, cmb_serial: str, pack_qr_data: str = "") -> str: #3
+    return build_hv_bms_id_zpl(
+        bmb_serial=bmb_serial,
+        cmb_serial=cmb_serial,
+        pack_qr_data=pack_qr_data,
     )

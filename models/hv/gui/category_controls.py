@@ -1,11 +1,9 @@
- 
-
 import tkinter as tk
 from collections.abc import Callable
 from tkinter import ttk
 
 from models.hv.gui.constants import CATEGORY_OPTIONS, variants_for_category
-from models.hv.gui.layout import FIELD_FONT, FIELD_IPADY
+from models.hv.gui.layout import FIELD_FONT#, FIELD_IPADY
 
 
 def add_category_field(
@@ -17,10 +15,7 @@ def add_category_field(
     """Add Category field — same style as other config fields, bold label, no box."""
     compact = grid_column is not None
     frame = ttk.Frame(parent)
-    if compact:
-        frame.grid(row=0, column=grid_column, sticky="nsew", padx=(0, 10))
-    else:
-        frame.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
+    frame.grid(row=0, column=grid_column, sticky="nsew", padx=(0, 10))
 
     frame.columnconfigure(0, weight=1)
     ttk.Label(frame, text="Category", font=("Segoe UI", 9, "bold")).pack(anchor=tk.W)
@@ -28,11 +23,7 @@ def add_category_field(
         frame, textvariable=category_var, values=CATEGORY_OPTIONS,
         state="readonly", font=FIELD_FONT,
     )
-    combo.pack(
-        fill=tk.X,
-        pady=(5, 0) if compact else (2, 0),
-        ipady=FIELD_IPADY,
-    )
+    combo.pack(fill=tk.X,pady=(5, 0),ipady=2,)
     return combo
 
 

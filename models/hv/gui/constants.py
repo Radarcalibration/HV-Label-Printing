@@ -1,6 +1,4 @@
- 
-
-VARIANT_OPTIONS = ["12P", "16P", "24P", "27P"] #33p and 48p are low voltage type, 8p and 10p are shockwave type.
+VARIANT_OPTIONS = ["12P", "16P", "24P", "27P", "SW_LH_8P"] #1
 
 VARIANT_TO_MODEL_BY_CELL_MFR = {
     "Ten Power": {
@@ -8,12 +6,14 @@ VARIANT_TO_MODEL_BY_CELL_MFR = {
         "16P": "VX156600",
         "24P": "VX156610",
         "27P": "VX155480",
+        "SW_LH_8P": "VX155490" #2
     },
     "BAK": {
         "12P": "VQ150040",
         "16P": "VQ150050",
         "24P": "VQ150060",
         "27P": "VQ150070",
+        "SW_LH_8P": "VQ150080" #3
     },
 }
 
@@ -23,12 +23,14 @@ REESS_BY_MODEL_BY_CELL_MFR = {
         "VX156610": "VX156060", #24p
         "VX156600": "VX156070", #16p
         "VX156590": "VX156080", #12p
+        "VX155490": "VX155810", #SW_LH_8P #4
     },
     "BAK": {
         "VQ150040": "VQ150000", #12P
         "VQ150070": "VQ150030", #27P
         "VQ150060": "VQ150020", #24P
         "VQ150050": "VQ150010", #16P
+        "VQ150080": "VQ150011", #SW_LH_8P #5
     },
 }
 
@@ -84,6 +86,16 @@ VARIANT_PARAMS = {
         "emark":          "E11*136R01/00*0111*00",
         "energy_kwh":     "13.6 kWh",
     },
+    "SW_LH_8P": {                           #6
+            "rated_capacity": "5 kWh",
+            "max_voltage":    "116.2 V",
+            "model_number":   "VQ150080",  #7
+            "type_of_reess":  "VQ150011",   #8
+            "tac_number":     "AS8310",
+            "emark":          "E11*136R01/00*0119*00",
+            "energy_kwh":     "12.1 kWh",
+        },
+    
 }
 
 
@@ -92,6 +104,12 @@ MODULE_VARIANT_CODES = {
     "16P": "D",
     "24P": "E",
     "27P": "F",
+    "SW_LH_8P": "G",    #9
+    # "SW_RH_8P": "H",
+    # "SW_LH_10P": "I",
+    # "SW_RH_10P": "J",
+    # "TS_8P": "K",
+    # "TS_10P": "L",
 }
 VARIANT_BY_CODE = {v: k for k, v in MODULE_VARIANT_CODES.items()}
 
@@ -159,7 +177,7 @@ BATTERY_PARAM_ROWS = [
     ("Max Voltage",     "max_voltage",    False),
     ("Model Number",    "model_number",   False),
     ("TAC Number",      "tac_number",     False),
-    ("Serial Number",   "serial_number",  True),
+    ("Serial Number",   "serial_number",  False),
 ]
 
 
@@ -220,7 +238,7 @@ def get_max_voltage(variant: str) -> str:
 def get_emark_res_code(variant: str) -> str:
     import re as _re
     raw = get_emark(variant)
-    match = _re.match(r"E(\d+)\*(\d+)R(\d+)/\d+\*(\d+)\*\d+", raw)
+    match = _re.match(r"E(\d+)\*(\d+)R(\d+)/\d+\*(\d+)\*\d+", raw) #E11*136R01/00*0112*00
     if not match: 
         return "NA" 
     _e_num, prefix, r_num, suffix = match.groups()
@@ -232,6 +250,7 @@ SRB_BY_VARIANT = {
     "16P": "SRB07",
     "24P": "SRB10",
     "27P": "SRB12",
+    "SW_LH_8p": "SRB13",    #10
 }
 
 

@@ -96,7 +96,7 @@ def build_hv_pack_id_zpl(
     b += _footer(1)
     return b
 
-# def build_battery_pack_id_zpl_unified(
+# def build_hv_pack_id_zpl(
 #     *,
 #     rated_capacity: str,
 #     max_voltage: str,
