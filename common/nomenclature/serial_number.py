@@ -61,7 +61,7 @@ CELL_MFR_BY_CODE_NEW = {
 
 
 NEW_SERIAL_NUMBER_PATTERN = re.compile(
-    r"^(?P<plant>[ABC])(?P<model>[ABCD])(?P<variant>[AST][0-9])(?P<line>[123])"
+    r"^(?P<plant>[ABC])(?P<model>[ABCD])(?P<variant>A[1-6]|S[1-4]|T[1-4])(?P<line>[123])"
     r"(?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})"
     r"(?P<category>[12])(?P<cell_mfr>[P-U])(?P<serial_count>\d{5})$"
 )

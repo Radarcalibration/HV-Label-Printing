@@ -9,5 +9,14 @@ VQ150030:ABA61202609151R00276
 
 VQ150000:ABA31202609242R00295
 
-1) i have given the SW_LH_8P variant for everywhere to add, check with serial number pattern (it should accept) all MODULE_VARIANT_CODES_NEW
-2) i have commented build_hv_pack_id_zpl same below this function in zpl.py (if cell mfr is BAK) TAC Number = XXXXXXXX and no values after 136RES (E-Marking number) write this directly in that function only.
+
+Variant	 	MODULE PART NUMBER	PACK PART NUMBER	RATED CAPACITY	SRB	MAX VOLT	TAC NUMBER	Remark
+SW LH 8P	S1	BP00000140	BP00000129	4 kWh	4	116.2V	XXXXX	TAC number will be provided after homologation approval
+SW RH 8P	S2	BP00000141
+SW LH 10P	S3	BP00000033	BP00000002	5 kWh	5	116.2V	XXXXX	TAC number will be provided after homologation approval
+SW RH 10P	S4	BP00000041
+SW LH 10P	S5	BP00000148	BP00000130	6 kWh	6	116.2V	XXXXX	TAC number will be provided after homologation approval
+SW RH 10P	S6	BP00000147
+TS 8P	T1	BP00000131	BP00000131	3.5 kWh	4	116.2V	XXXXX	TAC number will be provided after homologation approval
+TS 10P	T2	BP00000001	BP00000001	5 kWh	5	116.2V	XXXXX	TAC number will be provided after homologation approval
+TS 10P	T3	BP00000132	BP00000132	6 kWh	6	116.2V	XXXXX	TAC number will be provided after homologation approval

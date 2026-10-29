@@ -250,7 +250,7 @@ SRB_BY_VARIANT = {
     "16P": "SRB07",
     "24P": "SRB10",
     "27P": "SRB12",
-    "SW_LH_8p": "SRB13",    #10
+    "SW_LH_8P": "SRB13",    #10
 }
 
 

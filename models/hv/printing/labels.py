@@ -123,6 +123,9 @@ def build_hv_pack_id_label(
         mfg_date_new=mfg_date_new,
         qr_data=qr_data,
         category=category,
+        cell_mfr=cell_mfr or get_cell_mfr_from_reess(
+            pack_qr_data.split(":", 1)[0]
+        ) or "",
     )
     
     
