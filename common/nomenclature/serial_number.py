@@ -2,6 +2,15 @@ import re
 from dataclasses import dataclass
 from datetime import date, datetime
 
+from models.hv.gui.constants import (
+    MODEL_CODES,
+    VARIANT_OPTIONS,
+    get_cell_mfr_options,
+    get_serial_model,
+    get_serial_variant_code,
+    get_variant_by_serial_code,
+)
+
 # Serial number codes
 NEW_PLANT_CODES = {
     "Jigani": "A",
@@ -10,36 +19,29 @@ NEW_PLANT_CODES = {
 }
 NEW_PLANT_BY_CODE = {code: name for name, code in NEW_PLANT_CODES.items()}
 
-MODEL_CODES = {
-    "low voltage": "A",
-    "high voltage": "B",
-    "shockwave": "C",
-    "tesseract": "D",
-}
 MODEL_BY_CODE = {code: name for name, code in MODEL_CODES.items()}
-MODEL_BY_VARIANT = {
-    "12P": "high voltage",
-    "16P": "high voltage",
-    "24P": "high voltage",
-    "27P": "high voltage",
-    "SW_LH_8P": "shockwave",
+_SERIAL_MODEL_PATTERN = "|".join(
+    re.escape(code)
+    for code in sorted(MODEL_BY_CODE, key=len, reverse=True)
+)
+_SERIAL_MANUFACTURERS = {
+    variant: get_cell_mfr_options(variant)[0]
+    for variant in VARIANT_OPTIONS
+    if get_cell_mfr_options(variant)
 }
-
+MODEL_BY_VARIANT = {
+    variant: get_serial_model(variant, cell_mfr)
+    for variant, cell_mfr in _SERIAL_MANUFACTURERS.items()
+}
 MODULE_VARIANT_CODES_NEW = {
-    # "33P": "A1",  # low voltage
-    # "48P": "A2",  # low voltage
-    "12P": "A3",  # high voltage
-    "16P": "A4",  # high voltage
-    "24P": "A5",  # high voltage
-    "27P": "A6",  # high voltage
-    "SW_LH_8P": "S1",   # Shockwave #1
-    # "SW RH 8P": "S2",
-    # "SW LH 10P": "S3",
-    # "SW LH 10P": "S4",
-    # "TS 8P": "T1",  #tesseract
-    # "TS 10P" : "T2"
+    variant: get_serial_variant_code(variant, cell_mfr)
+    for variant, cell_mfr in _SERIAL_MANUFACTURERS.items()
 }
 VARIANT_BY_CODE_NEW = {code: name for name, code in MODULE_VARIANT_CODES_NEW.items()}
+_SERIAL_VARIANT_PATTERN = "|".join(
+    re.escape(code)
+    for code in sorted(MODULE_VARIANT_CODES_NEW.values(), key=len, reverse=True)
+)
 
 # Category code.
 CATEGORY_CODES_NEW = {
@@ -68,7 +70,7 @@ CELL_MFR_BY_CODE_NEW = {
 
 
 NEW_SERIAL_NUMBER_PATTERN = re.compile(
-    r"^(?P<plant>[ABC])(?P<model>[ABCD])(?P<variant>A[1-6]|S[1-4]|T[1-4])(?P<line>[123])"
+    rf"^(?P<plant>[ABC])(?P<model>{_SERIAL_MODEL_PATTERN})(?P<variant>{_SERIAL_VARIANT_PATTERN})(?P<line>[123])"
     r"(?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})"
     r"(?P<category>[12])(?P<cell_mfr>[P-U])(?P<serial_count>\d{5})$"
 )
@@ -135,18 +137,26 @@ def build_serial_number(
     if variant_key not in MODULE_VARIANT_CODES_NEW:
         raise ValueError(f"Unsupported variant: {variant}")
 
-    model_key = MODEL_BY_VARIANT.get(variant_key)
-    if model_key is None:
+    cell_mfr_key = (cell_mfr or "").strip().lower()
+    supported_cell_mfrs = {
+        manufacturer.lower() for manufacturer in get_cell_mfr_options(variant_key)
+    }
+    if cell_mfr_key not in supported_cell_mfrs:
+        raise ValueError(f"Unsupported cell manufacturer for {variant_key}: {cell_mfr}")
+
+    cell_mfr_name = next(
+        manufacturer
+        for manufacturer in get_cell_mfr_options(variant_key)
+        if manufacturer.lower() == cell_mfr_key
+    )
+    model_key = get_serial_model(variant_key, cell_mfr_name)
+    if not model_key:
         raise ValueError(f"No serial-number model is configured for variant: {variant}")
     requested_model = (model or "").strip().lower()
     if requested_model and requested_model != model_key:
         raise ValueError(
             f"Variant {variant_key} requires model {model_key}, not {requested_model}."
         )
-
-    cell_mfr_key = (cell_mfr or "").strip().lower()
-    if cell_mfr_key not in CELL_MFR_CODES_NEW:
-        raise ValueError(f"Unsupported cell manufacturer: {cell_mfr}")
 
     category_key = (category or "").strip().lower()
     if category_key not in CATEGORY_CODES_NEW:
@@ -172,7 +182,7 @@ def build_serial_number(
     return (
         f"{NEW_PLANT_CODES[plant_key]}"
         f"{MODEL_CODES[model_key]}"
-        f"{MODULE_VARIANT_CODES_NEW[variant_key]}"
+        f"{get_serial_variant_code(variant_key, cell_mfr_name)}"
         f"{line}"
         f"{when:%Y%m%d}"
         f"{CATEGORY_CODES_NEW[category_key]}"
@@ -217,12 +227,16 @@ def _parse_serial_number(cleaned: str) -> ParsedSerialNumber | None:
     category_code = g["category"]
     manufacturer_code = g["cell_mfr"]
 
+    variant = get_variant_by_serial_code(variant_code)
+    cell_mfr = CELL_MFR_BY_CODE_NEW.get(manufacturer_code)
+    model = MODEL_BY_CODE.get(model_code)
     if (
         plant_code not in NEW_PLANT_BY_CODE
-        or model_code not in MODEL_BY_CODE
-        or variant_code not in VARIANT_BY_CODE_NEW
-        or manufacturer_code not in CELL_MFR_BY_CODE_NEW
+        or variant is None
+        or cell_mfr is None
+        or model is None
         or category_code not in CATEGORY_BY_CODE_NEW
+        or model != get_serial_model(variant, cell_mfr)
     ):
         return None
 
@@ -239,9 +253,9 @@ def _parse_serial_number(cleaned: str) -> ParsedSerialNumber | None:
         day=int(g["day"]),
         serial_count=g["serial_count"],
         raw=cleaned,
-        model=MODEL_BY_CODE[model_code],
-        variant=VARIANT_BY_CODE_NEW[variant_code],
-        cell_mfr=CELL_MFR_BY_CODE_NEW[manufacturer_code],
+        model=model,
+        variant=variant,
+        cell_mfr=cell_mfr,
         category=CATEGORY_BY_CODE_NEW[category_code],
     )
 

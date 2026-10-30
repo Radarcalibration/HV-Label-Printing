@@ -6,8 +6,8 @@ import requests
 from api.Client import get_machine_details, send_dummy_scan
 from models.hv.gui.battery_parameters import build_battery_parameters_panel, set_battery_parameters
 from models.hv.gui.constants import (
-    VARIANT_OPTIONS,
     format_pack_qr_data,
+    get_cell_mfr_options,
     get_type_of_reess,
     get_variant_params,
 )
@@ -101,10 +101,19 @@ class DummyIdGUI:
             self.serial_entry_var.set("")
             return
 
+        supported_cell_mfrs = get_cell_mfr_options(result.serial.variant)
+        cell_mfr = result.cell_mfr or result.serial.cell_mfr
+        if cell_mfr not in supported_cell_mfrs:
+            messagebox.showwarning(
+                "Cell Manufacturer",
+                f"{result.serial.variant} is only configured for BAK cells.",
+                parent=self.root,
+            )
+            self.serial_entry_var.set("")
+            return
+
         self._parsed_serial = result.serial
-        self.cell_mfr_var.set(
-            result.cell_mfr if result.cell_mfr in DUMMY_CELL_MFR_OPTIONS else "--Select--"
-        )
+        self.cell_mfr_var.set(cell_mfr)
         self.serial_entry_var.set(result.serial.raw)
         self._open_details_popup()
 
@@ -118,6 +127,16 @@ class DummyIdGUI:
         frame = ttk.Frame(popup, padding=16)
         frame.pack(fill=tk.BOTH, expand=True)
 
+        parsed = self._parsed_serial
+        if parsed is None:
+            popup.destroy()
+            return
+        supported_cell_mfrs = [
+            cell_mfr
+            for cell_mfr in get_cell_mfr_options(parsed.variant)
+            if cell_mfr in DUMMY_CELL_MFR_OPTIONS
+        ]
+
         ttk.Label(frame, text="Enter Pack Details", font=HEADING_FONT).grid(
             row=0, column=0, columnspan=2, sticky=tk.W, pady=(0, 10)
         )
@@ -125,13 +144,12 @@ class DummyIdGUI:
         ttk.Combobox(
             frame,
             textvariable=self.cell_mfr_var,
-            values=DUMMY_CELL_MFR_OPTIONS,
+            values=supported_cell_mfrs,
             state="readonly",
             width=22,
             justify="center",
         ).grid(row=1, column=1, sticky="ew", pady=3)
 
-        parsed = self._parsed_serial
         variant_var = tk.StringVar(value=parsed.variant)
         ref_no_var = tk.StringVar()
 
@@ -141,7 +159,7 @@ class DummyIdGUI:
         next_row += 1
 
         def _on_ok() -> None:
-            if self.cell_mfr_var.get() not in DUMMY_CELL_MFR_OPTIONS:
+            if self.cell_mfr_var.get() not in supported_cell_mfrs:
                 messagebox.showwarning(
                     "Cell Manufacturer",
                     "Select a cell manufacturer first.",
@@ -183,8 +201,8 @@ class DummyIdGUI:
 
         category = "Export" if parsed.is_export else "Domestic"
 
-        params = get_variant_params(variant) or get_variant_params(VARIANT_OPTIONS[-1])
         cell_mfr = self.cell_mfr_var.get()
+        params = get_variant_params(variant, cell_mfr)
         model_number = get_type_of_reess(variant, cell_mfr)
         mfg_date = parsed.format_date()
         label_mfg_date = (
@@ -197,11 +215,11 @@ class DummyIdGUI:
 
         set_battery_parameters(
             self._param_labels,
-            rated_capacity=params["rated_capacity"],
-            max_voltage=params["max_voltage"],
+            rated_capacity=params.get("rated_capacity", ""),
+            max_voltage=params.get("max_voltage", ""),
             model_number=model_number,
-            tac_number=params["tac_number"],
-            emark=params["emark"],
+            tac_number=params.get("tac_number", ""),
+            emark=params.get("emark_number", ""),
             category=category,
             captions=self._captions,
         )
@@ -210,7 +228,7 @@ class DummyIdGUI:
         zpl = build_hv_dummy_id_label(
             pack_qr_data=pack_qr,
             serial_number=serial,
-            tac_number=params["tac_number"],
+            tac_number=params.get("tac_number", ""),
             mfg_date=label_mfg_date,
             variant=variant,
             category=category,

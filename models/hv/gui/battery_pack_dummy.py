@@ -10,6 +10,10 @@ from models.hv.gui.constants import (
     CELL_MFR_OPTIONS,
     VARIANT_OPTIONS,
     format_pack_qr_data,
+    get_cell_mfr_options,
+    get_module_count,
+    get_pack_variant,
+    get_serial_model,
     get_type_of_reess,
     get_variant_params,
     variants_for_category,
@@ -98,6 +102,13 @@ class BatteryPackDummyGUI:
         if stored:
             parsed = parse_serial_number(stored)
             if parsed is not None:
+                if parsed.cell_mfr not in get_cell_mfr_options(parsed.variant):
+                    messagebox.showwarning(
+                        "Cell Manufacturer",
+                        f"{parsed.variant} is only configured for BAK cells.",
+                        parent=self.root,
+                    )
+                    return
                 serial = build_serial_number(
                     plant=parsed.plant,
                     line=parsed.line,
@@ -365,7 +376,14 @@ class BatteryPackDummyGUI:
 
 
     def _all_modules_scanned(self) -> bool:
-        return all(v.get().strip() for v in self._module_vars)
+        m1 = parse_module_id(self._module_vars[0].get().strip())
+        if m1 is None:
+            return False
+        required_count = get_module_count(m1.variant, m1.cell_mfr)
+        return required_count > 0 and all(
+            self._module_vars[index].get().strip()
+            for index in range(required_count)
+        )
 
     def _m1_variant(self) -> str | None:
         m1_raw = self._module_vars[0].get().strip()
@@ -401,7 +419,7 @@ class BatteryPackDummyGUI:
         self.scan_var.set("")
 
         if result.scan_type == ScanType.SERIAL_NUMBER:
-            messagebox.showwarning("Scan format", " This is Serial Number, scan module IDs (M1-M4).", parent=self.root)
+            messagebox.showwarning("Scan format", "Scan the required module IDs for this battery pack.", parent=self.root)
             return
 
         if result.scan_type == ScanType.MODULE_ID and result.module is not None: # module ids validation logic
@@ -417,11 +435,20 @@ class BatteryPackDummyGUI:
                 )
                 return
 
-            empty_slots = [i for i, v in enumerate(self._module_vars) if not v.get().strip()]
+            first_module = parse_module_id(self._module_vars[0].get().strip())
+            required_count = (
+                get_module_count(first_module.variant, first_module.cell_mfr)
+                if first_module is not None
+                else get_module_count(result.module.variant, result.module.cell_mfr)
+            )
+            empty_slots = [
+                i for i in range(required_count)
+                if not self._module_vars[i].get().strip()
+            ]
             if not empty_slots:
                 messagebox.showwarning(
                     "Scan order",
-                    "All 4 modules are already scanned. clear for next scan.",
+                    f"All {required_count} required modules are already scanned. Clear before the next pack.",
                     parent=self.root,
                 )
                 return
@@ -431,9 +458,9 @@ class BatteryPackDummyGUI:
             incoming_variant = result.module.variant
             incoming_plant = result.module.plant
             incoming_part_number = result.module.part_number
-            m1_variant = self._m1_variant()
             m1_plant = self._m1_plant()
             m1_part_number = self._m1_part_number()
+            m1_cell_mfr = first_module.cell_mfr if first_module is not None else None
             category = self.vars["category"].get().strip().lower()
 
             if category == "export" and incoming_variant not in variants_for_category("Export"): #1
@@ -443,20 +470,33 @@ class BatteryPackDummyGUI:
                     parent=self.root,
                 )
                 return
-            if module_number > 1 and m1_part_number is not None and incoming_part_number != m1_part_number:
+            if module_number > 1 and m1_cell_mfr != result.module.cell_mfr:
                 messagebox.showerror(
-                    "module mismatch",
-                    f"M{module_number} is {incoming_part_number} but M1 is {m1_part_number}.",
+                    "Cell manufacturer mismatch",
+                    f"M{module_number} is {result.module.cell_mfr} but M1 is {m1_cell_mfr}.",
                     parent=self.root,
                 )
                 return
-            if module_number > 1 and m1_variant is not None and incoming_variant != m1_variant:
-                messagebox.showerror(
-                    "Variant mismatch",
-                    f"M{module_number} is {incoming_variant} but M1 is {m1_variant}.",
-                    parent=self.root,
-                )
-                return
+            if module_number > 1 and first_module is not None:
+                first_pack_variant = get_pack_variant(first_module.variant, first_module.cell_mfr)
+                incoming_pack_variant = get_pack_variant(incoming_variant, result.module.cell_mfr)
+                if first_pack_variant != incoming_pack_variant:
+                    messagebox.showerror(
+                        "Variant mismatch",
+                        f"M{module_number} belongs to {incoming_pack_variant}, but M1 belongs to {first_pack_variant}.",
+                        parent=self.root,
+                    )
+                    return
+                if (
+                    get_serial_model(first_module.variant, first_module.cell_mfr) == "shockwave"
+                    and first_module.part_number == incoming_part_number
+                ):
+                    messagebox.showerror(
+                        "Module mismatch",
+                        "Shockwave M1 and M2 must have different module part numbers.",
+                        parent=self.root,
+                    )
+                    return
             if module_number > 1 and m1_plant is not None and incoming_plant != m1_plant:
                 messagebox.showerror(
                     "Plant mismatch",
@@ -484,20 +524,37 @@ class BatteryPackDummyGUI:
             self._reset_integration()
             return
 
-        variants = []
+        first_module = parse_module_id(self._module_vars[0].get().strip())
+        if first_module is None:
+            self._reset_integration()
+            return
+        required_count = get_module_count(first_module.variant, first_module.cell_mfr)
+        modules = []
         plants: list[str] = []
         cell_mfrs: list[str] = []
-        for mv in self._module_vars:
+        for mv in self._module_vars[:required_count]:
             p = parse_module_id(mv.get().strip())
             if p is None:
                 self._reset_integration()
                 return
-            variants.append(p.variant)
+            modules.append(p)
             plants.append(p.plant)
             cell_mfrs.append(p.cell_mfr)
 
-        if len(set(variants)) > 1:
-            messagebox.showerror("variants mismatch", "All modules must be the same variant.", parent=self.root)
+        pack_variants = {
+            get_pack_variant(module.variant, module.cell_mfr)
+            for module in modules
+        }
+        part_numbers = {module.part_number for module in modules}
+        if len(pack_variants) != 1:
+            messagebox.showerror("Variants mismatch", "Scanned modules do not belong to the same pack variant.", parent=self.root)
+            self._reset_integration()
+            return
+        if (
+            get_serial_model(first_module.variant, first_module.cell_mfr) == "shockwave"
+            and len(part_numbers) != required_count
+        ):
+            messagebox.showerror("Module mismatch", "Shockwave M1 and M2 must have different module part numbers.", parent=self.root)
             self._reset_integration()
             return
 
@@ -510,16 +567,14 @@ class BatteryPackDummyGUI:
             self._reset_integration()
             return
 
-        variant = variants[0]
+        variant = next(iter(pack_variants))
         cell_mfr = cell_mfrs[0]
+        self._suppress_traces = True
         self.vars["cell_mfr"].set(cell_mfr)
-        serial = load_pack_serial()
-        if not serial:
-            self._rebuild_and_store_serial()
-            serial = load_pack_serial()
-
         self.vars["variant"].set(variant)
+        self._suppress_traces = False
         self._on_variant_or_revision_change()
+        serial = load_pack_serial()
         self.serial_number_var.set(serial)
 
         pack_qr = format_pack_qr_data(variant=variant, serial_number=serial, cell_mfr=cell_mfr)
@@ -592,7 +647,7 @@ class BatteryPackDummyGUI:
         cell_mfr = self.vars["cell_mfr"].get()
         serial = self.serial_number_var.get().strip()
         pack_qr = self.pack_qr_var.get().strip()
-        params = get_variant_params(variant) or get_variant_params(VARIANT_OPTIONS[-1])
+        params = get_variant_params(variant, cell_mfr)
 
         _parsed = parse_serial_number(serial)
         mfg_date = _parsed.format_date() if _parsed else ""
@@ -611,12 +666,7 @@ class BatteryPackDummyGUI:
 
         ref_no = self.vars["ref_no"].get().strip()
 
-        dummy_variants = set()
-        for mv in self._module_vars:
-            p = parse_module_id(mv.get().strip())
-            if p:
-                dummy_variants.add(p.variant.strip().lower())
-        dummy_status = "INTEGRATION OK" if len(dummy_variants) == 1 else "INTEGRATION FAILED" #"Mismatch"
+        dummy_status = "INTEGRATION OK" if self._integration_ok else "INTEGRATION FAILED"
 
         record = ScanRecord(
             date=mfg_date,
@@ -656,9 +706,15 @@ class BatteryPackDummyGUI:
             category=category,
             cell_mfr=cell_mfr,
         )
-        dispatch_zpl(self.root, zpl, self.print_var.get(), default_name=f"pack_{serial}.zpl", printer_name=PRINTER_DUMMY)
+        print_succeeded = dispatch_zpl(
+            self.root,
+            zpl,
+            self.print_var.get(),
+            default_name=f"pack_{serial}.zpl",
+            printer_name=PRINTER_DUMMY,
+        )
 
-        if log_saved:
+        if log_saved or (self.print_var.get() == "print" and print_succeeded):
             try:
                 increment_pack_serial()
             except ValueError as exc:
@@ -679,7 +735,11 @@ class BatteryPackDummyGUI:
     def _auto_reset(self) -> None:
         for module_var in self._module_vars:
             module_var.set("")
-        self.vars["cell_mfr"].set("")
+        self._suppress_traces = True
+        try:
+            self.vars["cell_mfr"].set("")
+        finally:
+            self._suppress_traces = False
         self._reset_integration()
         self.preview_var.set("--Waiting for Module Integration--")
         self._true_date = datetime.now().date()
@@ -741,16 +801,26 @@ class BatteryPackDummyGUI:
     def _on_variant_or_revision_change(self, *_args: object) -> None:
         variant = self.vars["variant"].get()
         cell_mfr = self.vars["cell_mfr"].get()
-        params = get_variant_params(variant) or get_variant_params(VARIANT_OPTIONS[-1])
+        supported_cell_mfrs = get_cell_mfr_options(variant)
+        cell_mfr_combo = self._widgets.get("cell_mfr")
+        if isinstance(cell_mfr_combo, ttk.Combobox):
+            cell_mfr_combo.configure(values=supported_cell_mfrs)
+        if supported_cell_mfrs and cell_mfr not in supported_cell_mfrs:
+            was_suppressing = self._suppress_traces
+            self._suppress_traces = True
+            self.vars["cell_mfr"].set(supported_cell_mfrs[0])
+            self._suppress_traces = was_suppressing
+            cell_mfr = supported_cell_mfrs[0]
+        params = get_variant_params(variant, cell_mfr)
 
         if self._param_labels:
             set_battery_parameters(
                 self._param_labels,
-                rated_capacity=params["rated_capacity"],
-                max_voltage=params["max_voltage"],
+                rated_capacity=params.get("rated_capacity", ""),
+                max_voltage=params.get("max_voltage", ""),
                 model_number=get_type_of_reess(variant, cell_mfr) if cell_mfr else "Waiting...",
-                tac_number=params["tac_number"],
-                emark=params["emark"],
+                tac_number=params.get("tac_number", ""),
+                emark=params.get("emark_number", ""),
                 category=self.vars["category"].get(),
                 captions=self._captions,
             )
@@ -876,6 +946,13 @@ class BatteryPackDummyGUI:
     def _update_vars_from_serial(self, serial: str) -> None:
         parsed = parse_serial_number(serial.strip())
         if parsed is None:
+            return
+        if parsed.cell_mfr not in get_cell_mfr_options(parsed.variant):
+            messagebox.showwarning(
+                "Cell Manufacturer",
+                f"{parsed.variant} is only configured for BAK cells.",
+                parent=self.root,
+            )
             return
         from datetime import date as _date
         is_export = self.vars["category"].get().strip().lower() == "export"

@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass
 from enum import Enum
 
-from models.hv.gui.constants import REESS_TO_VARIANT
+from models.hv.gui.constants import get_pack_variant, get_type_of_reess
 from models.hv.nomenclature.bms_id import parse_bmb_cmb_id
 from models.hv.nomenclature.module_id import ParsedModuleId, parse_module_id
 from models.hv.nomenclature.serial_number import ParsedSerialNumber, parse_serial_number
@@ -13,9 +13,6 @@ _PACK_QR_PATTERN = re.compile(
     r"^(?P<reess>[A-Z0-9]+):(?P<serial>[A-Z0-9]+)$",
     re.IGNORECASE,
 )
-
-VARIANT_BY_REESS: dict[str, str] = REESS_TO_VARIANT
-
 
 class ScanType(Enum):
     SERIAL_NUMBER = "serial_number"
@@ -47,14 +44,13 @@ def identify_scan(value: str) -> ScanResult:
         serial_raw = pack_qr_match.group("serial")
         serial = parse_serial_number(serial_raw)
         if serial is not None:
-            variant = VARIANT_BY_REESS.get(reess_part)
-            if variant and serial.variant and variant != serial.variant:
+            if get_type_of_reess(serial.variant, serial.cell_mfr) != reess_part:
                 return ScanResult(raw=cleaned.upper(), scan_type=ScanType.UNKNOWN)
             return ScanResult(
                 raw=cleaned.upper(),
                 scan_type=ScanType.SERIAL_NUMBER,
                 serial=serial,
-                pack_variant=variant,
+                pack_variant=get_pack_variant(serial.variant, serial.cell_mfr),
                 cell_mfr=serial.cell_mfr,
             )
 

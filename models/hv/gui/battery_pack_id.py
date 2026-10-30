@@ -9,6 +9,7 @@ from models.hv.gui.constants import (
     CELL_MFR_OPTIONS,
     VARIANT_OPTIONS,
     format_pack_qr_data,
+    get_cell_mfr_options,
     get_type_of_reess,
     get_variant_params,
 )
@@ -58,7 +59,7 @@ class BatteryPackIdGUI:
         self._serial_number_entry: ttk.Entry | None = None
         self._suppress_config_update = False
         self.category_var = tk.StringVar(value="Domestic")
-        self.variant_var = tk.StringVar(value=VARIANT_OPTIONS[-1])
+        self.variant_var = tk.StringVar()
         self.cell_mfr_var = tk.StringVar(value="--Waiting for Scan--")
         self.scanner_var = tk.StringVar()
         self.print_var = tk.StringVar(value="print")
@@ -149,26 +150,35 @@ class BatteryPackIdGUI:
         return combo
 
     def _on_variant_change(self, *_args: object) -> None:
+        variant = self.variant_var.get()
+        supported_cell_mfrs = get_cell_mfr_options(variant)
+        if self._cell_mfr_combo is not None:
+            self._cell_mfr_combo.configure(values=supported_cell_mfrs)
+        if supported_cell_mfrs and self.cell_mfr_var.get() not in supported_cell_mfrs:
+            was_suppressing = self._suppress_config_update
+            self._suppress_config_update = True
+            self.cell_mfr_var.set(supported_cell_mfrs[0])
+            self._suppress_config_update = was_suppressing
+
         if not self._param_labels:
             return
 
-        variant = self.variant_var.get()
-        params = get_variant_params(variant) or get_variant_params(VARIANT_OPTIONS[-1])
+        params = get_variant_params(variant, self.cell_mfr_var.get())
 
         category = self.category_var.get()
         cell_mfr = self.cell_mfr_var.get()
 
         set_battery_parameters(
             self._param_labels,
-            rated_capacity=params["rated_capacity"],
-            max_voltage=params["max_voltage"],
+            rated_capacity=params.get("rated_capacity", ""),
+            max_voltage=params.get("max_voltage", ""),
             model_number=(
                 get_type_of_reess(variant, cell_mfr)
                 if cell_mfr
                 else ""
             ),
-            tac_number=params["tac_number"],
-            emark=params["emark"],
+            tac_number=params.get("tac_number", ""),
+            emark=params.get("emark_number", ""),
             category=category,
             captions=self._captions,
             show_emark_for_export=False,
@@ -177,6 +187,13 @@ class BatteryPackIdGUI:
     def _restore_saved_serial(self) -> None:
         parsed = parse_serial_number(load_pack_serial())
         if parsed is None:
+            return
+        if parsed.cell_mfr not in get_cell_mfr_options(parsed.variant):
+            messagebox.showwarning(
+                "Cell Manufacturer",
+                f"{parsed.variant} is only configured for BAK cells.",
+                parent=self.root,
+            )
             return
 
         normalized_serial = build_serial_number(
@@ -196,6 +213,8 @@ class BatteryPackIdGUI:
         self._apply_serial_configuration(parsed)
 
     def _apply_serial_configuration(self, parsed: ParsedSerialNumber) -> None:
+        if parsed.cell_mfr not in get_cell_mfr_options(parsed.variant):
+            return
         self._suppress_config_update = True
         try:
             self.category_var.set(parsed.category.capitalize())
@@ -381,6 +400,14 @@ class BatteryPackIdGUI:
         self.scanner_var.set(result.raw)
 
         if result.scan_type == ScanType.SERIAL_NUMBER and result.serial is not None: # serial number is accepted, only dummy pack id is accepted
+            if result.serial.cell_mfr not in get_cell_mfr_options(result.serial.variant):
+                messagebox.showwarning(
+                    "Cell Manufacturer",
+                    f"{result.serial.variant} is only configured for BAK cells.",
+                    parent=self.root,
+                )
+                self.scanner_var.set("")
+                return
             # if result.pack_variant is None or result.cell_mfr is None:
             #     self.scanner_var.set("")
             #     messagebox.showwarning(

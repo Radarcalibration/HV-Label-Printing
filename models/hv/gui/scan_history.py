@@ -2,7 +2,7 @@ import os
 import tkinter as tk
 from tkinter import messagebox, ttk
 
-from models.hv.gui.constants import VARIANT_OPTIONS
+from models.hv.gui.constants import VARIANT_OPTIONS, get_variant_params
 from models.hv.gui.print_actions import dispatch_zpl
 from models.hv.printing.constants import PRINTER_PACK_ID, PRINTER_DUMMY
 from models.hv.printing.labels import (
@@ -66,7 +66,7 @@ class ScanHistoryDialog(tk.Toplevel):
         parent: tk.Misc,
         *,
         print_mode: str = "print",
-        variant: str = VARIANT_OPTIONS[-1],
+        variant: str = "",
         session=None,
         origin: str = "dummy",
     ) -> None:
@@ -210,9 +210,12 @@ class ScanHistoryDialog(tk.Toplevel):
             messagebox.showwarning("Reprint", "No pack QR data for this record.", parent=self)
             return
 
-        from models.hv.gui.constants import get_variant_params
         from models.hv.nomenclature.scan_handler import identify_scan
-        variant = rec.variant.strip() if rec.variant.strip() in VARIANT_OPTIONS else self._variant
+        variant = (
+            rec.variant.strip()
+            if rec.variant.strip() in VARIANT_OPTIONS
+            else (scan.pack_variant or scan.serial.variant)
+        )
         scan = identify_scan(rec.dummy_pack_qr)
         if scan.serial is None:
             messagebox.showwarning(
@@ -222,7 +225,7 @@ class ScanHistoryDialog(tk.Toplevel):
             )
             return
         cell_mfr = scan.cell_mfr or ""
-        params = get_variant_params(variant) or get_variant_params(VARIANT_OPTIONS[-1])
+        params = get_variant_params(variant, cell_mfr)
         category = scan.serial.category.capitalize()
         label_mfg_date = (
             scan.serial.as_date.strftime("%Y")
@@ -233,7 +236,7 @@ class ScanHistoryDialog(tk.Toplevel):
         zpl = build_hv_dummy_id_label(
             pack_qr_data=rec.dummy_pack_qr,
             serial_number=rec.serial_number or scan.serial.raw,
-            tac_number=params["tac_number"],
+            tac_number=params.get("tac_number", ""),
             mfg_date=label_mfg_date,
             variant=variant,
             category=category,
@@ -254,13 +257,17 @@ class ScanHistoryDialog(tk.Toplevel):
             messagebox.showwarning("Reprint", "Pack QR data for this record isn't valid.", parent=self)
             return
 
-        from models.hv.gui.constants import get_type_of_reess, get_variant_params
-        variant = rec.variant.strip() if rec.variant.strip() in VARIANT_OPTIONS else (result.pack_variant or self._variant)
+        from models.hv.gui.constants import get_type_of_reess
+        variant = (
+            rec.variant.strip()
+            if rec.variant.strip() in VARIANT_OPTIONS
+            else (result.pack_variant or result.serial.variant)
+        )
         cell_mfr = result.cell_mfr or ""
         serial_number = rec.serial_number or result.serial.raw
         
         category = result.serial.category.capitalize()
-        params = get_variant_params(variant) or get_variant_params(VARIANT_OPTIONS[-1])
+        params = get_variant_params(variant, cell_mfr)
         model_number = get_type_of_reess(variant, cell_mfr)
         label_mfg_date = (
             result.serial.as_date.strftime("%Y")
@@ -270,10 +277,10 @@ class ScanHistoryDialog(tk.Toplevel):
 
         zpl = build_hv_pack_id_label(
             serial_number=serial_number,
-            rated_capacity=params["rated_capacity"],
-            max_voltage=params["max_voltage"],
+            rated_capacity=params.get("rated_capacity", ""),
+            max_voltage=params.get("max_voltage", ""),
             type_of_reess=model_number,
-            tac_number=params["tac_number"],
+            tac_number=params.get("tac_number", ""),
             variant=variant,
             category=category,
             mfg_date=label_mfg_date,
@@ -323,7 +330,7 @@ def open_scan_history(
     parent: tk.Misc,
     *,
     print_mode: str = "print",
-    variant: str = VARIANT_OPTIONS[-1],
+    variant: str = "",
     session=None,
     origin: str = "dummy",
 ) -> None:

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 
 from models.hv.gui.constants import (
-    MODULE_VARIANT_CODES, VARIANT_BY_CODE,
+    get_module_variant_code, get_variant_by_module_code,
     GROUP_CODES, GROUP_BY_CODE,
     CELL_MFR_CODES, CELL_MFR_BY_CODE,
     PLANT_CODES_HV, PLANT_BY_CODE_HV,
@@ -15,7 +15,7 @@ from models.hv.gui.constants import (
 )
 
 _SUB_PATTERN = re.compile(
-    r"^(?P<variant>[C-G])" #1
+    r"^(?P<variant>[C-O])"
     r"(?P<group>[1-3])"
     r"(?P<cell_mfr>[1-6])"
     r"(?P<plant>[123ABC])" #plant encoded (either 123 and ABC)
@@ -29,7 +29,7 @@ _SUB_PATTERN = re.compile(
 # VX156600-D1611105J260303 (valid module id, from robot cell sorting machine) -> accept this type
 # VQ156610-E2A1116J26009759 (invalid module id, from manual cell sorting machine) -> can't accept this type
 _FULL_PATTERN = re.compile(
-    r"^(?P<part_number>(?:V[QX][0-9]{6}|BP[0-9]{8}))-(?P<sub>[C-G][1-3][1-6][123ABC][123][123]\d{2}[A-L]\d{2}\d{4})$"
+    r"^(?P<part_number>(?:V[QX][0-9]{6}|BP[0-9]{8}))-(?P<sub>[C-O][1-3][1-6][123ABC][123][123]\d{2}[A-L]\d{2}\d{4})$"
 )
 @dataclass(frozen=True)
 class ParsedModuleId:
@@ -66,7 +66,7 @@ def build_module_sub_id(
     if isinstance(when, datetime):
         when = when.date()
 
-    v_code  = MODULE_VARIANT_CODES.get(variant.strip())
+    v_code  = get_module_variant_code(variant.strip(), cell_mfr.strip())
     g_code  = GROUP_CODES.get(group.strip())
     cm_code = CELL_MFR_CODES.get(cell_mfr.strip())
     p_code  = PLANT_CODES_HV.get(plant.strip())
@@ -159,7 +159,7 @@ def parse_module_id(value: str) -> ParsedModuleId | None:
         return None
 
     g = sm.groupdict()
-    variant  = VARIANT_BY_CODE.get(g["variant"])
+    variant  = get_variant_by_module_code(g["variant"])
     cell_mfr = CELL_MFR_BY_CODE.get(g["cell_mfr"])
     plant    = PLANT_BY_CODE_HV.get(g["plant"])
     group    = GROUP_BY_CODE.get(g["group"])

@@ -35,7 +35,7 @@ def dispatch_zpl(
     *,
     default_name: str = "label.zpl",
     printer_name: str | None = None,
-) -> None:
+) -> bool:
    
     try:
         if mode == "print":
@@ -44,7 +44,7 @@ def dispatch_zpl(
             else:
                 send_zpl(zpl)
             messagebox.showinfo("Print Success", "Label sent to printer.", parent=parent)
-            return
+            return True
 
         # Save as .txt with the same ZPL content
         txt_name = default_name.rsplit(".", 1)[0] + ".txt"
@@ -56,12 +56,14 @@ def dispatch_zpl(
             filetypes=[("Text files", "*.txt"), ("ZPL files", "*.zpl"), ("All files", "*.*")],
         )
         if not path:
-            return
+            return False
 
         saved = save_zpl(zpl, path)
         messagebox.showinfo("Save", f"Label saved to:\n{saved}", parent=parent)
+        return True
     except OSError as exc:
         messagebox.showerror("Print", str(exc), parent=parent)
+        return False
 
 
 def dispatch_zpl_batch(
