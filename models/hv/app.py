@@ -1,5 +1,3 @@
- 
-
 import tkinter as tk
 from tkinter import ttk
 from pathlib import Path
@@ -15,7 +13,7 @@ SCREENS = {
     "Battery Pack Dummy ID": BatteryPackDummyGUI,
     "Battery Pack ID": BatteryPackIdGUI,
     "BMS ID": BmsIdGUI,
-    "Dummy ID (manual)": DummyIdGUI,
+    # "Dummy ID (manual)": DummyIdGUI,
 }
 
 

@@ -145,70 +145,21 @@ def save_pack_serial_count(serial_count: str) -> None:
         _save_values({"serial_count": serial_count})
 
 
-# def _increment_prefix(prefix: str) -> str:
-#     if not prefix:
-#         return "A"
 
-#     chars = list(prefix)
-#     pos = len(chars) - 1
-
-#     while pos >= 0:
-#         if chars[pos] != "Z":
-#             chars[pos] = chr(ord(chars[pos]) + 1)
-#             return "".join(chars)
-
-#         chars[pos] = "A"
-#         pos -= 1
-
-#     return "A" + "".join(chars)
-
-
-# def increment_serial_count(serial_count: str) -> str:
-#     serial_count = serial_count.strip().upper()
-#     prefix = ""
-#     for ch in serial_count:
-#         if ch.isalpha():
-#             prefix += ch
-#         else:
-#             break
-#     digits = serial_count[len(prefix):]
-#     if not digits:
-#         raise ValueError(f"Invalid serial count: {serial_count}")
-#     current_number = int(digits)
-#     max_number = int("9" * len(digits))
-#     # normal increment inside current range
-#     if current_number < max_number:
-#         return (
-#             prefix
-#             + str(current_number + 1).zfill(len(digits))
-#         )
-#     # numeric overflow
-#     new_prefix = _increment_prefix(prefix)
-#     if len(new_prefix) > 4:
-#         raise ValueError(
-#             "Serial count has reached the maximum value of ZZZZ9."
-#         )
-#     remaining_digits = 5 - len(new_prefix)
-#     return new_prefix + ("0" * remaining_digits)
-
-
-def increment_pack_serial() -> str:
-    current = load_pack_serial()
+def increment_pack_serial(serial_number: str | None = None) -> str:
+    current = (serial_number or load_pack_serial()).strip()
     if not current:
-        return ""
+        raise ValueError("Cannot increment an empty serial number.")
 
     parsed = parse_serial_number(current)
     if parsed is None:
-        return current
+        raise ValueError(f"Cannot increment invalid serial number: {current}")
 
     next_count = int(parsed.serial_count) + 1
     if next_count > 99999:
         raise ValueError("Serial count has reached the maximum value of 99999.")
     new_count = str(next_count).zfill(5)
     
-    # new_count = increment_serial_count(
-    # parsed.serial_count
-    # )
 
     new_serial = build_serial_number(
         plant=parsed.plant,

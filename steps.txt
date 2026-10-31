@@ -1,36 +1,113 @@
-Steps to add variants
-====================
+Adding a New Battery Model
 
-For each new variant, update these locations in order:
+module_count="3".
 
-1. `common/nomenclature/serial_number.py`
-   - Add the variant and model family to `MODEL_BY_VARIANT`.
-   - Assign a unique serial variant code in `MODULE_VARIANT_CODES_NEW`.
-   - Expand `NEW_SERIAL_NUMBER_PATTERN` if the code is outside its accepted ranges.
+1. models/hv/gui/constants.py
 
-2. `models/hv/gui/constants.py`
-   - Add the name to `VARIANT_OPTIONS`.
-   - Add module part numbers to `VARIANT_TO_MODEL_BY_CELL_MFR`.
-   - Map each module part number to its pack/REESS number in
-     `REESS_BY_MODEL_BY_CELL_MFR`.
-   - Add capacity, voltage, SRB, TAC, and E-mark under the correct
-     `VARIANT_PARAMS` family.
-   - Assign a unique module-ID code in `MODULE_VARIANT_CODES`.
+  battery_parameters {
+    -> model family (add your model) {
+      -> pack variant (add variant) {
+        -> cell manufacturer (add cell manufacturer){
+          -> parameter dictionary{rated_capacity, maximum voltage ...etc.}
+        }
+      }
+    }
+  }
 
-3. `models/hv/nomenclature/module_id.py`
-   - Extend `_SUB_PATTERN` and `_FULL_PATTERN` if the new module-ID code is
-     outside the accepted range.
+For every model/variant/manufacturer parameter dictionary, fill in all fields
+consumed by the application:
 
-4. `models/hv/gui/dummy_id.py`
-   - Add a cell manufacturer to `DUMMY_CELL_MFR_OPTIONS` only if required.
+  rated_capacity        Displayed on the pack label.
+  max_voltage           Displayed on the pack label.
+  module_part_number    Part number of module ID.
+  pack_id_part_number   part number of dummy ID. -> (which is printed as model number in label).
+  srb_code              Used by the pack ID label.
+  tac_number            Used on domestic dummy/pack labels. -> (for export dummy label- e-marking no'r used).
+  emark_res_code        Used by the pack ID label. -> (136RES....etc).
+  serial_model          (LV, HV, Tesseract, Shockwave, ....etc)
+  serial_model_code     (LV-A, HV-B, ...etc)
+  serial_variant_code   (A1-A6, S1-S6, T1-T3... etc)
+  module_variant_code   (A,B,C....upto O, .... add more) -> 1st letter in module id after part no'r.
+  module_count          (M1-M4 for HV, M1-M2 for shockwave, M1 for tesseract etc) -> how many module id's for that battery model.
+  pack_variant          (12P, 16P,..., SW_LH_8P, ...., TS_8P, .... etc) -> all the variants for each model.
 
-5. `updates.md`
-   - Add the variant specifications and matching sample serial, module IDs,
-     and pack QR data.
+# If a model has multiple variants, use the same serial_model and
+serial_model_code for all variants in that model. (ex- for hv(12P,16P,24P and 27P), "serial_model": "hv" and "serial_model_code": "1").
 
-6. Verify
-   - Check serial and module-ID build/parse, manufacturer part-number lookup,
-     Domestic/Export option behavior, QR data, and label output.
+# serial_variant_code and module_variant_code. same pack_variant can be assigned to different module variant_codes. (ex--BP00000129 can hold BP00000140-G1311130J260001
+BP00000141-H1311130J260002 (G and H). ) --> this is how the Shockwave left/right modules are paired.
 
-Keep serial variant codes, module-ID codes, model-family codes, module part
-numbers, and pack/REESS numbers distinct; update each mapping separately.
+# Manufacturer-specific values must be provided for every supported
+manufacturer. (ex- if SW_LH_8P with Ten power exist means (provide all the variables inside it, like rated capacity,...etc)). 
+
+# The serial model code must be identical across all entries for
+that model; (ex-- for hv, all variants (12p, 16p, 24p and 27p), must have same serial model code as B.).
+
+# the module-variant lookup uses the first manufacturer's entry for
+each variant, so its module_variant_code must also be identical across those
+entries.
+
+# Current module_variant_code values occupy C through O. If the new module code
+use P or a later character, then update that range in module id pattern (both _SUB_PATTERN and _FULL_PATTERN). (re.compile). there in step 2.
+
+# unique values (do not reuse it):- serial_variant_code values, module_variant_code, pack_variant.
+
+2. models/hv/nomenclature/module_id.py
+
+# The accepted module variant range is currently hard-coded as [C-O] in both
+_SUB_PATTERN and _FULL_PATTERN. If the new module_variant_code is outside that
+range, extend both expressions to include it (for example, [C-P] when adding
+P).( [A-Z0-9]-- accepted format for any value.)
+
+# The full module ID pattern also limits module part numbers to VQ..., VX..., or
+BP... formats. If the new module_part_number uses another format, extend
+_FULL_PATTERN to accept that exact format as well. (see _FULL_PATTERN)
+
+3. common/nomenclature/serial_number.py
+
+Normally no edit is needed there. Confirm that the new serial_model_code and
+serial_variant_code are unique and that build_serial_number() and
+parse_serial_number() both accept the new model/variant.
+
+4. models/hv/gui/battery_pack_dummy.py
+
+# The Battery Pack Dummy ID integration reads module_count using
+get_module_count().
+
+# _on_scan() assigns scanned modules in order, and _try_complete_integration()
+waits for the configured number.(ex -- With module_count="3", M1, M2, and M3 complete
+integration).
+
+# The screen currently displays four module positions. M4 remains empty for a
+three-module pack. The scan log intentionally has fixed M1-M4 columns in:
+  models/hv/session/scan_log.py
+and the history table in:
+  models/hv/gui/scan_history.py
+
+# no changes required. the remaining module places (ex- M3 and M4 for shockwave) should be blank.
+
+5. Validate the new model before release
+
+Use the real part numbers and codes and verify all of the following:
+  - get_cell_mfr_options() lists the intended manufacturer(s).(ex- ["bak","ten power", ..etc]).
+  - get_module_count(variant, manufacturer) returns (1 or 2 or 3 or 4).
+  - A valid M1, M2, and M3 module ID each parse through parse_module_id().
+  - A module ID with the new module_variant_code is accepted.
+  - build_serial_number() then parse_serial_number() round-trips the new
+    variant, manufacturer, model, date, and serial count.
+  - format_pack_qr_data() uses the new pack_id_part_number.
+  - Domestic and export category options are correct. Export variants need a
+    real emark_number other than "NA" to appear in the export selector.
+  - Confirm the serial count increments and the next generated serial parses.
+
+  - "Dummy ID (manual)": DummyIdGUI, (uncomment this if you need dummy id manual screen).
+
+After validation, rebuild the Windows executable with:
+  pyinstaller hv_main.spec
+
+
+
+
+
+
+  

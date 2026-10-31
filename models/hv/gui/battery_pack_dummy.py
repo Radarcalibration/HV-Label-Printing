@@ -650,13 +650,20 @@ class BatteryPackDummyGUI:
         params = get_variant_params(variant, cell_mfr)
 
         _parsed = parse_serial_number(serial)
-        mfg_date = _parsed.format_date() if _parsed else ""
+        if _parsed is None:
+            messagebox.showerror(
+                "Invalid Serial Number",
+                "The current serial number is invalid, so it cannot be logged or incremented.",
+                parent=self.root,
+            )
+            return
+        save_pack_serial(serial)
+        mfg_date = _parsed.format_date()
         category = self.vars["category"].get()
         label_mfg_date = ""
-        if _parsed is not None:
-            date_format = "%Y" if category.strip().lower() == "export" else "%d %b %Y"
-            label_mfg_date = _parsed.as_date.strftime(date_format)
-        serial_count = _parsed.serial_count if _parsed else ""
+        date_format = "%Y" if category.strip().lower() == "export" else "%d %b %Y"
+        label_mfg_date = _parsed.as_date.strftime(date_format)
+        serial_count = _parsed.serial_count
         
         now = datetime.now()
         machine = get_machine_details()
@@ -692,6 +699,10 @@ class BatteryPackDummyGUI:
             log_saved = True
         except Exception as exc:
             messagebox.showerror("Log Error", f"Could not able to write scan log:\n{exc}", parent=self.root)
+        serial_advanced = False
+        if log_saved:
+            serial_advanced = self._advance_serial_count(serial)
+
         try:
             send_dummy_scan(record) # client side post
         except requests.exceptions.RequestException as e:
@@ -714,12 +725,10 @@ class BatteryPackDummyGUI:
             printer_name=PRINTER_DUMMY,
         )
 
-        if log_saved or (self.print_var.get() == "print" and print_succeeded):
-            try:
-                increment_pack_serial()
-            except ValueError as exc:
-                messagebox.showerror("Serial Count Limit", str(exc), parent=self.root)
-                return
+        if not log_saved and self.print_var.get() == "print" and print_succeeded:
+            serial_advanced = self._advance_serial_count(serial)
+
+        if log_saved or serial_advanced:
             self.root.after(_RESET_DELAY_MS, self._auto_reset) # resets essential fields after 1s
         else: # for log save faild
             for module_var in self._module_vars:
@@ -728,6 +737,30 @@ class BatteryPackDummyGUI:
             self._on_variant_or_revision_change()
             self._reset_integration()
             self.preview_var.set("--Waiting for Module Integration--")
+
+    def _advance_serial_count(self, serial: str) -> bool:
+        try:
+            next_serial = increment_pack_serial(serial)
+        except ValueError as exc:
+            messagebox.showerror("Serial Count Limit", str(exc), parent=self.root)
+            return False
+
+        next_parsed = parse_serial_number(next_serial)
+        if next_parsed is None:
+            messagebox.showerror(
+                "Serial Count Error",
+                "The next serial number could not be parsed.",
+                parent=self.root,
+            )
+            return False
+
+        self._suppress_traces = True
+        try:
+            self.vars["serial_count"].set(next_parsed.serial_count)
+            self.serial_number_var.set(next_serial)
+        finally:
+            self._suppress_traces = False
+        return True
 
     def _open_history(self) -> None:
         open_scan_history(self.root, print_mode=self.print_var.get(), variant=self.vars["variant"].get(), origin="dummy")

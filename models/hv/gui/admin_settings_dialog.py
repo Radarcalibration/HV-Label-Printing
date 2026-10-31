@@ -122,8 +122,13 @@ class AdminSettingsDialog(tk.Toplevel):
         ttk.Button(form,text="Save",command=self.save_all_settings,).grid(row=10,column=4,sticky=tk.E,pady=(10, 0))
 
     def save_all_settings(self) -> None:
-
-        if not self.save_api_urls_button() and self.save_api_keys_button() and self.save_machine_details_button():
+        if not self.save_api_urls_button():
+            self._status_label.config(text="Pending", foreground="red")
+            return
+        if not self.save_api_keys_button():
+            self._status_label.config(text="Pending", foreground="red")
+            return
+        if not self.save_machine_details_button():
             self._status_label.config(text="Pending",foreground="red")
             return
 

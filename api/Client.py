@@ -4,10 +4,26 @@ from tkinter import messagebox
 
 import requests
 
+from common.storage import connect_db
+
 if TYPE_CHECKING:
     from models.hv.session.bms_scan_log import BmsScanRecord
     from models.hv.session.pack_id_scan_log import PackIdScanRecord
     from models.hv.session.scan_log import ScanRecord
+
+_SETTING_KEYS = {
+    "dummy_api_url": "api.dummy.url",
+    "pack_id_api_url": "api.pack_id.url",
+    "bms_api_url": "api.bms.url",
+    "dummy_api_key": "api.dummy.key",
+    "pack_id_api_key": "api.pack_id.key",
+    "bms_api_key": "api.bms.key",
+    "dummy_enabled": "api.dummy.enabled",
+    "pack_id_enabled": "api.pack_id.enabled",
+    "bms_enabled": "api.bms.enabled",
+    "machine_name": "api.machine.name",
+    "machine_id": "api.machine.id",
+}
 
 _API_URLS = {
     "dummy_api_url": "",
@@ -32,6 +48,44 @@ _machine_details = {
     "machine_id": "",
 }
 
+
+def _persist_settings(values: dict[str, str]) -> None:
+    with connect_db() as connection:
+        connection.executemany(
+            """
+            INSERT INTO app_state(key, value) VALUES (?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value
+            """,
+            ((_SETTING_KEYS[name], value) for name, value in values.items()),
+        )
+
+
+def _load_settings() -> None:
+    with connect_db() as connection:
+        rows = connection.execute(
+            "SELECT key, value FROM app_state WHERE key IN ({})".format(
+                ", ".join("?" for _ in _SETTING_KEYS.values())
+            ),
+            tuple(_SETTING_KEYS.values()),
+        ).fetchall()
+    values = {row["key"]: row["value"] for row in rows}
+
+    for name in _API_URLS:
+        _API_URLS[name] = values.get(_SETTING_KEYS[name], "")
+    for name in _API_KEYS:
+        _API_KEYS[name] = values.get(_SETTING_KEYS[name], "")
+    for endpoint in _API_CALL_ENABLED:
+        setting_name = f"{endpoint}_enabled"
+        _API_CALL_ENABLED[endpoint] = values.get(
+            _SETTING_KEYS[setting_name], "true"
+        ).lower() == "true"
+    for name in _machine_details:
+        _machine_details[name] = values.get(_SETTING_KEYS[name], "")
+
+
+_load_settings()
+
+
 def get_api_urls() -> dict[str, str]:
     return _API_URLS.copy()
 
@@ -47,6 +101,7 @@ def get_api_call_settings() -> dict[str, bool]:
 def set_api_call_enabled(endpoint: str, enabled: bool) -> None:
     if endpoint not in _API_CALL_ENABLED:
         raise ValueError(f"Unknown API endpoint: {endpoint}")
+    _persist_settings({f"{endpoint}_enabled": str(enabled).lower()})
     _API_CALL_ENABLED[endpoint] = enabled
 
 
@@ -55,26 +110,32 @@ def get_machine_details() -> dict[str, str]:
 
 
 def save_machine_details(machine_name: str, machine_id: str) -> None:
-    _machine_details.update(
-        machine_name=machine_name.strip(),
-        machine_id=machine_id.strip(),
-    )
+    values = {
+        "machine_name": machine_name.strip(),
+        "machine_id": machine_id.strip(),
+    }
+    _persist_settings(values)
+    _machine_details.update(values)
 
 
 def save_api_urls(dummy_url: str, pack_id_url: str, bms_url: str) -> None:
-    _API_URLS.update(
-        dummy_api_url=dummy_url.strip(),
-        pack_id_api_url=pack_id_url.strip(),
-        bms_api_url=bms_url.strip(),
-    )
+    values = {
+        "dummy_api_url": dummy_url.strip(),
+        "pack_id_api_url": pack_id_url.strip(),
+        "bms_api_url": bms_url.strip(),
+    }
+    _persist_settings(values)
+    _API_URLS.update(values)
 
 
 def save_api_keys(dummy_key: str, pack_id_key: str, bms_key: str) -> None:
-    _API_KEYS.update(
-        dummy_api_key=dummy_key.strip(),
-        pack_id_api_key=pack_id_key.strip(),
-        bms_api_key=bms_key.strip(),
-    )
+    values = {
+        "dummy_api_key": dummy_key.strip(),
+        "pack_id_api_key": pack_id_key.strip(),
+        "bms_api_key": bms_key.strip(),
+    }
+    _persist_settings(values)
+    _API_KEYS.update(values)
 
 
 def is_valid_api_url(value: str) -> bool:
@@ -120,8 +181,21 @@ def _post(url: str, api_key: str, payload: dict[str, str]) -> None:
             timeout=10,
         )
         response.raise_for_status()
+        try:
+            result = response.json()
+        except ValueError:
+            result = {}
+        acknowledgement = result.get("message") if isinstance(result, dict) else None
+        print(
+            f"API POST succeeded ({response.status_code}): "
+            f"{acknowledgement or 'Server accepted the scan.'}"
+        )
     except requests.exceptions.RequestException as e:
         print("Request failed:", e)
+        messagebox.showerror(
+            "API Request Failed",
+            f"The server did not save the scan:\n{e}",
+        )
 
 
 def send_dummy_scan(record: ScanRecord) -> None:
