@@ -257,7 +257,7 @@ class ScanHistoryDialog(tk.Toplevel):
             messagebox.showwarning("Reprint", "Pack QR data for this record isn't valid.", parent=self)
             return
 
-        from models.hv.gui.constants import get_type_of_reess
+        from models.hv.gui.constants import get_pack_part_number
         variant = (
             rec.variant.strip()
             if rec.variant.strip() in VARIANT_OPTIONS
@@ -268,7 +268,7 @@ class ScanHistoryDialog(tk.Toplevel):
         
         category = result.serial.category.capitalize()
         params = get_variant_params(variant, cell_mfr)
-        model_number = get_type_of_reess(variant, cell_mfr)
+        model_number = get_pack_part_number(variant, cell_mfr)
         label_mfg_date = (
             result.serial.as_date.strftime("%Y")
             if result.serial.is_export

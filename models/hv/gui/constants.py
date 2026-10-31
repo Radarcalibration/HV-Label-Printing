@@ -338,7 +338,7 @@ def variants_for_category(category: str) -> list[str]:
 
 
 def format_pack_qr_data(*, variant: str, serial_number: str, cell_mfr: str) -> str:
-    reess = get_type_of_reess(variant, cell_mfr)
+    reess = get_pack_part_number(variant, cell_mfr)
     if reess == "NA":
         raise ValueError(f"Unsupported variant/cell manufacturer: {variant}/{cell_mfr}")
     return f"{reess}:{serial_number.strip()}"
@@ -358,7 +358,7 @@ def get_full_model_number(variant: str, revision: str, cell_mfr: str) -> str:
     return f"{part}-{revision}" if part and revision else part
 
 
-def get_type_of_reess(variant: str, cell_mfr: str) -> str:
+def get_pack_part_number(variant: str, cell_mfr: str) -> str:
     return str(get_variant_params(variant, cell_mfr).get("pack_id_part_number", "NA"))
 
 

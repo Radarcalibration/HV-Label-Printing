@@ -4,7 +4,7 @@ from models.hv.gui.constants import (
     get_srb_code,
     get_tac_number,
     get_cell_mfr_from_reess,
-    get_type_of_reess,
+    get_pack_part_number,
     get_pack_variant,
 )
 from models.hv.nomenclature.serial_number import parse_serial_number
@@ -26,7 +26,7 @@ def _reess_for_pack_qr(*, variant: str, cell_mfr: str, pack_qr_data: str) -> str
         ):
             raise ValueError(f"serial number in pack QR does not match configuration: {pack_qr_data}")
         cell_mfr = parsed_serial.cell_mfr
-    reess = get_type_of_reess(variant, cell_mfr) # get part number from battery parameters
+    reess = get_pack_part_number(variant, cell_mfr) # get part number from battery parameters
     if reess == "NA":
         raise ValueError(f"part number of pack id does not match variant/cell manufacturer: {pack_qr_data}")
     if qr_reess and reess != qr_reess:

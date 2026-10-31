@@ -8,7 +8,7 @@ from models.hv.gui.battery_parameters import build_battery_parameters_panel, set
 from models.hv.gui.constants import (
     format_pack_qr_data,
     get_cell_mfr_options,
-    get_type_of_reess,
+    get_pack_part_number,
     get_variant_params,
 )
 from models.hv.gui.layout import FIELD_FONT, FIELD_IPADY, HEADING_FONT
@@ -203,7 +203,7 @@ class DummyIdGUI:
 
         cell_mfr = self.cell_mfr_var.get()
         params = get_variant_params(variant, cell_mfr)
-        model_number = get_type_of_reess(variant, cell_mfr)
+        model_number = get_pack_part_number(variant, cell_mfr)
         mfg_date = parsed.format_date()
         label_mfg_date = (
             parsed.as_date.strftime("%Y")

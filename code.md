@@ -234,7 +234,7 @@ Functions:
 - `get_model_number()`: resolves the model number for a variant.
 - `get_part_number()`: returns the part number for the pack.
 - `get_full_model_number()`: creates the complete battery model string.
-- `get_type_of_reess()`: maps the variant to REESS type information.
+- `get_pack_part_number()`: maps the variant to REESS type information.
 - `get_cell_mfr_from_reess()`: reads the cell maker from the REESS code.
 - `get_variant_from_reess()`: reverses the REESS mapping.
 - `get_tac_number()`: reads the TAC code.

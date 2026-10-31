@@ -14,7 +14,7 @@ from models.hv.gui.constants import (
     get_module_count,
     get_pack_variant,
     get_serial_model,
-    get_type_of_reess,
+    get_pack_part_number,
     get_variant_params,
     variants_for_category,
 )
@@ -818,7 +818,7 @@ class BatteryPackDummyGUI:
                 self._param_labels,
                 rated_capacity=params.get("rated_capacity", ""),
                 max_voltage=params.get("max_voltage", ""),
-                model_number=get_type_of_reess(variant, cell_mfr) if cell_mfr else "Waiting...",
+                model_number=get_pack_part_number(variant, cell_mfr) if cell_mfr else "Waiting...",
                 tac_number=params.get("tac_number", ""),
                 emark=params.get("emark_number", ""),
                 category=self.vars["category"].get(),

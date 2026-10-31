@@ -10,7 +10,7 @@ from models.hv.gui.constants import (
     VARIANT_OPTIONS,
     format_pack_qr_data,
     get_cell_mfr_options,
-    get_type_of_reess,
+    get_pack_part_number,
     get_variant_params,
 )
 from models.hv.gui.layout import FIELD_FONT, FIELD_IPADY, HEADING_FONT, LABEL_FONT, configure_equal_columns
@@ -173,7 +173,7 @@ class BatteryPackIdGUI:
             rated_capacity=params.get("rated_capacity", ""),
             max_voltage=params.get("max_voltage", ""),
             model_number=(
-                get_type_of_reess(variant, cell_mfr)
+                get_pack_part_number(variant, cell_mfr)
                 if cell_mfr
                 else ""
             ),

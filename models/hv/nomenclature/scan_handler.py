@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass
 from enum import Enum
 
-from models.hv.gui.constants import get_pack_variant, get_type_of_reess
+from models.hv.gui.constants import get_pack_variant, get_pack_part_number
 from models.hv.nomenclature.bms_id import parse_bmb_cmb_id
 from models.hv.nomenclature.module_id import ParsedModuleId, parse_module_id
 from models.hv.nomenclature.serial_number import ParsedSerialNumber, parse_serial_number
@@ -44,7 +44,7 @@ def identify_scan(value: str) -> ScanResult:
         serial_raw = pack_qr_match.group("serial")
         serial = parse_serial_number(serial_raw)
         if serial is not None:
-            if get_type_of_reess(serial.variant, serial.cell_mfr) != reess_part:
+            if get_pack_part_number(serial.variant, serial.cell_mfr) != reess_part:
                 return ScanResult(raw=cleaned.upper(), scan_type=ScanType.UNKNOWN)
             return ScanResult(
                 raw=cleaned.upper(),
