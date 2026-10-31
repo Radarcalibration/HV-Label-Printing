@@ -79,9 +79,7 @@ def build_hv_pack_id_label(
     type_of_reess = _reess_for_pack_qr(
         variant=variant, cell_mfr=cell_mfr, pack_qr_data=pack_qr_data
     )
-    qr_serial = pack_qr_data.split(":", 1)[1] if ":" in pack_qr_data else ""
-    parsed_serial = parse_serial_number(qr_serial)
-    qr_data = pack_qr_data or serial_number
+    qr_data = pack_qr_data
     return build_hv_pack_id_zpl(
         rated_capacity=rated_capacity,
         max_voltage=max_voltage,
@@ -94,13 +92,6 @@ def build_hv_pack_id_label(
         mfg_date=mfg_date,
         qr_data=qr_data,
         category=category,
-        cell_mfr=cell_mfr or (
-            parsed_serial.cell_mfr
-            if parsed_serial is not None
-            else get_cell_mfr_from_reess(
-                pack_qr_data.split(":", 1)[0]
-            ) or ""
-        ),
     )
     
     
